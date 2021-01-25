@@ -1,0 +1,16 @@
+github.com/edsrzf/mmap-go v1.0.0 h1:CEBF7HpRnUCSJgGUb5h1Gm7e3VkmVDrR8lvWVLtrOFw=
+github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
+github.com/gdbu/atoms v1.0.1 h1:7vSKoMNHQXQ0iMnDKjTDbOjhPVHZxgqiW4KPpKzGjyY=
+github.com/gdbu/atoms v1.0.1/go.mod h1:NAF1/IvAK0xby1xvmlRLBpapkWBhWL8dlcsxVDGuUpo=
+github.com/gdbu/scribe v0.4.88 h1:XuvLpX3Hpvz+L4Fh6sGWAX+LTdZcWPkcrECfKT0J4Jg=
+github.com/gdbu/scribe v0.4.88/go.mod h1:d2N8Lim+phn6EuoppRUs6Vm9CSAHtzhTubGNM+A9Ya4=
+github.com/hatchify/colors v0.4.79 h1:E7LXqZVYDFNaTcQGxlBSfEKQ2rByeAUW84uKkat3AoA=
+github.com/hatchify/colors v0.4.79/go.mod h1:t0952Ef1zDFMVTCkOwhrdJS9ToVWTdcJ3PWCHZADLuU=
+github.com/hatchify/cron v0.4.82 h1:NXiWl4/9w8Egg2N2FCrQuPYLevszgUv62ZHHMzfFbi8=
+github.com/hatchify/cron v0.4.82/go.mod h1:X/CVy+BJDASlwrjpwJC4+jzD5Oeaw/NHGYkKRO3r9Tc=
+github.com/hatchify/errors v0.4.82 h1:o7eB9r1X3Sx7PBRRXMCaAm+vXcoQLE4ZOesIv4oK36Q=
+github.com/hatchify/errors v0.4.82/go.mod h1:niCrsPjs0fFes147TgJ0LSUVdtavQTUvBxNoJm9Vew0=
+github.com/mojura/enkodo v0.5.2 h1:yVoGKtluYPejDUpwS9QGANAp7A2E5IR56uPFmOygABI=
+github.com/mojura/enkodo v0.5.2/go.mod h1:9/1bBkNTRhwLPSFAo0uG1a+numnsZMxNIzLdWxlFl+g=
+golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c h1:VwygUrnw9jn88c4u8GD3rZQbqrP/tgas88tPUbBxQrk=
+golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
