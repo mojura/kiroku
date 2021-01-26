@@ -32,9 +32,9 @@ func TestHistory_Transaction(t *testing.T) {
 	}
 	defer h.Close()
 
-	if err = h.Transaction(func(c *Chunk) (err error) {
-		c.SetIndex(1337)
-		c.AddRow(TypeWriteAction, []byte("hello world!"))
+	if err = h.Transaction(func(w *Writer) (err error) {
+		w.SetIndex(1337)
+		w.AddRow(TypeWriteAction, []byte("hello world!"))
 		return
 	}); err != nil {
 		t.Fatal(err)

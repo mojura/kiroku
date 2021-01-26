@@ -19,7 +19,7 @@ func NewReader(f *os.File) (rp *Reader, err error) {
 	return
 }
 
-// Reader will parse and read a chunk
+// Reader will parse and read a history chunk
 type Reader struct {
 	m *Meta
 	f *os.File

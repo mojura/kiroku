@@ -25,7 +25,7 @@ func New(dir, name string, pp Processor) (hp *History, err error) {
 	h.dir = filepath.Clean(dir)
 	h.name = name
 
-	if h.c, err = newChunk(dir, name); err != nil {
+	if h.c, err = newWriter(dir, name); err != nil {
 		err = fmt.Errorf("error initializing primary chunk: %v", err)
 		return
 	}
@@ -51,7 +51,7 @@ type History struct {
 
 	out *scribe.Scribe
 	// Current chunk
-	c *Chunk
+	c *Writer
 
 	// Last meta
 	m Meta
@@ -61,7 +61,7 @@ type History struct {
 	// Name of service
 	name string
 
-	// Chunk semaphore
+	// Writer semaphore
 	cs semaphore
 
 	// Post processing func
@@ -74,7 +74,7 @@ type History struct {
 }
 
 // Transaction will engage a new history transaction
-func (h *History) Transaction(fn func(*Chunk) error) (err error) {
+func (h *History) Transaction(fn func(*Writer) error) (err error) {
 	h.mux.Lock()
 	defer h.mux.Unlock()
 
@@ -82,8 +82,8 @@ func (h *History) Transaction(fn func(*Chunk) error) (err error) {
 	unix := now.UnixNano()
 	name := fmt.Sprintf("%s.chunk.%d", h.name, unix)
 
-	var c *Chunk
-	if c, err = newChunk(h.dir, name); err != nil {
+	var c *Writer
+	if c, err = newWriter(h.dir, name); err != nil {
 		return
 	}
 
@@ -127,7 +127,7 @@ func (h *History) getTruncatedName(filename string) (name string) {
 
 func (h *History) getNext() (filename string, ok bool, err error) {
 	fn := walkFn(func(iteratingName string, info os.FileInfo) (err error) {
-		if !h.isChunkMatch(iteratingName, info) {
+		if !h.isWriterMatch(iteratingName, info) {
 			return
 		}
 
@@ -144,7 +144,7 @@ func (h *History) getNext() (filename string, ok bool, err error) {
 	return
 }
 
-func (h *History) isChunkMatch(filename string, info os.FileInfo) (ok bool) {
+func (h *History) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
 	if info.IsDir() {
 		// We are not interested in directories, return
 		return
@@ -183,7 +183,7 @@ func (h *History) watch() {
 			continue
 		}
 
-		if err = h.processChunk(filename); err != nil {
+		if err = h.processWriter(filename); err != nil {
 			// TODO: Get teams input on the best course of action here
 			h.out.Errorf("error encountered during processing chunk: <%v>, sleeping for a minute and trying again", err)
 			time.Sleep(time.Minute)
@@ -198,7 +198,7 @@ func (h *History) waitForNext() {
 	}
 }
 
-func (h *History) processChunk(filename string) (err error) {
+func (h *History) processWriter(filename string) (err error) {
 	var (
 		m *Meta
 		f *os.File
@@ -236,10 +236,10 @@ func (h *History) mergeChunk(m *Meta, r io.ReadSeeker) (err error) {
 	return
 }
 
-func (h *History) deleteChunk(c *Chunk) (err error) {
+func (h *History) deleteChunk(w *Writer) (err error) {
 	var errs errors.ErrorList
-	errs.Push(c.close())
-	errs.Push(os.Remove(c.filename))
+	errs.Push(w.close())
+	errs.Push(os.Remove(w.filename))
 	return errs.Err()
 }
 

@@ -8,7 +8,7 @@ import (
 
 func TestReader_ForEach(t *testing.T) {
 	var (
-		c   *Chunk
+		c   *Writer
 		err error
 	)
 
@@ -47,7 +47,7 @@ func TestReader_ForEach(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if c, err = newChunk("./test_data", "testie"); err != nil {
+	if c, err = newWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
