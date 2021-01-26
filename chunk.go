@@ -27,6 +27,13 @@ func newChunk(dir, name string) (cc *Chunk, err error) {
 		return
 	}
 
+	// Move past meta
+	if _, err = c.f.Seek(metaSize, 0); err != nil {
+		return
+	}
+
+	// Initialize enkodo writer
+	c.w = enkodo.NewWriter(c.f)
 	// Associate returning pointer to created Chunk
 	cc = &c
 	return
@@ -51,12 +58,12 @@ type Chunk struct {
 
 // GetIndex will get the index value
 func (c *Chunk) GetIndex() (index int64) {
-	return c.m.CurrentIndex.Load()
+	return c.m.CurrentIndex
 }
 
 // SetIndex will set the index value
 func (c *Chunk) SetIndex(index int64) {
-	c.m.CurrentIndex.Store(index)
+	c.m.CurrentIndex = index
 }
 
 // AddRow will add a row
@@ -74,7 +81,7 @@ func (c *Chunk) AddRow(t Type, data []byte) (err error) {
 	}
 
 	// Increment row count
-	c.m.RowCount.Add(1)
+	c.m.RowCount++
 	return
 }
 
@@ -82,14 +89,14 @@ func (c *Chunk) init(m *Meta, createdAt int64) {
 	// Populate meta info
 	c.m.merge(m)
 	// Set chunk createdAt time
-	c.m.CreatedAt.Store(createdAt)
+	c.m.CreatedAt = createdAt
 }
 
 func (c *Chunk) merge(m *Meta, r io.Reader) (err error) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
-	if m.CreatedAt.Load() <= c.m.CreatedAt.Load() {
+	if m.CreatedAt <= c.m.CreatedAt {
 		return
 	}
 
@@ -110,7 +117,7 @@ func (c *Chunk) setSize() (err error) {
 		return
 	}
 
-	if fi.Size() < metaSize {
+	if fi.Size() >= metaSize {
 		return
 	}
 
