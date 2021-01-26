@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/edsrzf/mmap-go"
@@ -50,6 +49,11 @@ type Chunk struct {
 	filename string
 }
 
+// GetIndex will get the index value
+func (c *Chunk) GetIndex() (index int64) {
+	return c.m.CurrentIndex.Load()
+}
+
 // SetIndex will set the index value
 func (c *Chunk) SetIndex(index int64) {
 	c.m.CurrentIndex.Store(index)
@@ -74,11 +78,11 @@ func (c *Chunk) AddRow(t Type, data []byte) (err error) {
 	return
 }
 
-func (c *Chunk) init(m *Meta) {
+func (c *Chunk) init(m *Meta, createdAt int64) {
 	// Populate meta info
 	c.m.merge(m)
 	// Set chunk createdAt time
-	c.m.CreatedAt.Store(time.Now().UnixNano())
+	c.m.CreatedAt.Store(createdAt)
 }
 
 func (c *Chunk) merge(m *Meta, r io.Reader) (err error) {
