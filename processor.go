@@ -9,7 +9,7 @@ import (
 // Processor will process chunks
 type Processor func(m *Meta, r io.ReadSeeker) error
 
-func newProcessorPairFromFile(filename string) (m *Meta, f *os.File, err error) {
+func newProcessorPair(filename string) (m *Meta, f *os.File, err error) {
 	if f, err = os.Open(filename); err != nil {
 		return
 	}

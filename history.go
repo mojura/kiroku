@@ -205,7 +205,7 @@ func (h *History) processWriter(filename string) (err error) {
 		r io.ReadSeeker
 	)
 
-	if m, f, err = newProcessorPairFromFile(filename); err != nil {
+	if m, f, err = newProcessorPair(filename); err != nil {
 		return
 	}
 	defer f.Close()
