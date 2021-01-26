@@ -10,7 +10,7 @@ import (
 
 func TestKiroku_Transaction(t *testing.T) {
 	var (
-		h   *Kiroku
+		k   *Kiroku
 		err error
 	)
 
@@ -19,7 +19,7 @@ func TestKiroku_Transaction(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if h, err = New("./test_data", "tester", func(m *Meta, r io.ReadSeeker) (err error) {
+	if k, err = New("./test_data", "tester", func(m *Meta, r io.ReadSeeker) (err error) {
 		buf := bytes.NewBuffer(nil)
 		if _, err = io.Copy(buf, r); err != nil {
 			return
@@ -30,9 +30,9 @@ func TestKiroku_Transaction(t *testing.T) {
 		t.Fatal(err)
 		return
 	}
-	defer h.Close()
+	defer k.Close()
 
-	if err = h.Transaction(func(w *Writer) (err error) {
+	if err = k.Transaction(func(w *Writer) (err error) {
 		w.SetIndex(1337)
 		w.AddRow(TypeWriteAction, []byte("hello world!"))
 		return

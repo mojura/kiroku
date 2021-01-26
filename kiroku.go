@@ -18,30 +18,30 @@ const errBreak = errors.Error("break")
 
 // New will initialize a new Kiroku instance
 // Note: PostProcessor is optional
-func New(dir, name string, pp Processor) (hp *Kiroku, err error) {
-	var h Kiroku
+func New(dir, name string, pp Processor) (kp *Kiroku, err error) {
+	var k Kiroku
 	prefix := fmt.Sprintf("Mojura history (%v)", name)
-	h.out = scribe.New(prefix)
-	h.dir = filepath.Clean(dir)
-	h.name = name
+	k.out = scribe.New(prefix)
+	k.dir = filepath.Clean(dir)
+	k.name = name
 
-	if h.c, err = newWriter(dir, name); err != nil {
+	if k.c, err = newWriter(dir, name); err != nil {
 		err = fmt.Errorf("error initializing primary chunk: %v", err)
 		return
 	}
 
-	if h.p = pp; h.p == nil {
-		h.p = h.mergeChunk
+	if k.p = pp; k.p == nil {
+		k.p = k.mergeChunk
 	}
 
 	// Initialize semaphore
-	h.cs = make(semaphore, 1)
+	k.cs = make(semaphore, 1)
 	// TODO: Decide if we want to offer the ability to pass a context here.
 	// It might be nice to ensure history instances are properly shut down
-	h.ctx, h.cancelFn = context.WithCancel(context.Background())
-	go h.watch()
+	k.ctx, k.cancelFn = context.WithCancel(context.Background())
+	go k.watch()
 	// Associate returning pointer to created Kiroku
-	hp = &h
+	kp = &k
 	return
 }
 
@@ -74,24 +74,24 @@ type Kiroku struct {
 }
 
 // Transaction will engage a new history transaction
-func (h *Kiroku) Transaction(fn func(*Writer) error) (err error) {
-	h.mux.Lock()
-	defer h.mux.Unlock()
+func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
+	k.mux.Lock()
+	defer k.mux.Unlock()
 
 	now := time.Now()
 	unix := now.UnixNano()
-	name := fmt.Sprintf("%s.chunk.%d", h.name, unix)
+	name := fmt.Sprintf("%s.chunk.%d", k.name, unix)
 
 	var c *Writer
-	if c, err = newWriter(h.dir, name); err != nil {
+	if c, err = newWriter(k.dir, name); err != nil {
 		return
 	}
 
-	c.init(&h.m, unix)
+	c.init(&k.m, unix)
 
 	if err = fn(c); err != nil {
-		if deleteErr := h.deleteChunk(c); deleteErr != nil {
-			h.out.Errorf("error deleting chunk <%s>: %v", name, err)
+		if deleteErr := k.deleteChunk(c); deleteErr != nil {
+			k.out.Errorf("error deleting chunk <%s>: %v", name, err)
 		}
 
 		return
@@ -103,31 +103,31 @@ func (h *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 		return
 	}
 
-	h.cs.send()
-	h.m = newMeta
+	k.cs.send()
+	k.m = newMeta
 	return
 }
 
 // Close will close the selected instance of Kiroku
-func (h *Kiroku) Close() (err error) {
-	h.mux.Lock()
-	defer h.mux.Unlock()
-	if h.isClosed() {
+func (k *Kiroku) Close() (err error) {
+	k.mux.Lock()
+	defer k.mux.Unlock()
+	if k.isClosed() {
 		return errors.ErrIsClosed
 	}
 
 	var errs errors.ErrorList
-	errs.Push(h.c.close())
+	errs.Push(k.c.close())
 	return errs.Err()
 }
 
-func (h *Kiroku) getTruncatedName(filename string) (name string) {
-	return strings.Replace(filename, h.dir+"/", "", 1)
+func (k *Kiroku) getTruncatedName(filename string) (name string) {
+	return strings.Replace(filename, k.dir+"/", "", 1)
 }
 
-func (h *Kiroku) getNext() (filename string, ok bool, err error) {
+func (k *Kiroku) getNext() (filename string, ok bool, err error) {
 	fn := walkFn(func(iteratingName string, info os.FileInfo) (err error) {
-		if !h.isWriterMatch(iteratingName, info) {
+		if !k.isWriterMatch(iteratingName, info) {
 			return
 		}
 
@@ -137,24 +137,24 @@ func (h *Kiroku) getNext() (filename string, ok bool, err error) {
 		return errBreak
 	})
 
-	if err = filepath.Walk(h.dir, fn); err == errBreak {
+	if err = filepath.Walk(k.dir, fn); err == errBreak {
 		err = nil
 	}
 
 	return
 }
 
-func (h *Kiroku) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
+func (k *Kiroku) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
 	if info.IsDir() {
 		// We are not interested in directories, return
 		return
 	}
 
 	// Get truncated name
-	name := h.getTruncatedName(filename)
+	name := k.getTruncatedName(filename)
 
 	// Check to see if filename has the needed prefix
-	if !strings.HasPrefix(name, h.name+".chunk") {
+	if !strings.HasPrefix(name, k.name+".chunk") {
 		// We do not have a service match, return
 		return
 	}
@@ -162,7 +162,7 @@ func (h *Kiroku) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
 	return true
 }
 
-func (h *Kiroku) watch() {
+func (k *Kiroku) watch() {
 	var (
 		filename string
 
@@ -170,35 +170,35 @@ func (h *Kiroku) watch() {
 		err error
 	)
 
-	for !h.isClosed() {
-		if filename, ok, err = h.getNext(); err != nil {
+	for !k.isClosed() {
+		if filename, ok, err = k.getNext(); err != nil {
 			// TODO: Get teams input on if this value should be configurable
-			h.out.Errorf("error getting next chunk filename: <%v>, sleeping for a minute and trying again", err)
+			k.out.Errorf("error getting next chunk filename: <%v>, sleeping for a minute and trying again", err)
 			time.Sleep(time.Minute)
 			continue
 		}
 
 		if !ok {
-			h.waitForNext()
+			k.waitForNext()
 			continue
 		}
 
-		if err = h.processWriter(filename); err != nil {
+		if err = k.processWriter(filename); err != nil {
 			// TODO: Get teams input on the best course of action here
-			h.out.Errorf("error encountered during processing chunk: <%v>, sleeping for a minute and trying again", err)
+			k.out.Errorf("error encountered during processing chunk: <%v>, sleeping for a minute and trying again", err)
 			time.Sleep(time.Minute)
 		}
 	}
 }
 
-func (h *Kiroku) waitForNext() {
+func (k *Kiroku) waitForNext() {
 	select {
-	case <-h.cs:
-	case <-h.ctx.Done():
+	case <-k.cs:
+	case <-k.ctx.Done():
 	}
 }
 
-func (h *Kiroku) processWriter(filename string) (err error) {
+func (k *Kiroku) processWriter(filename string) (err error) {
 	var (
 		m *Meta
 		f *os.File
@@ -214,7 +214,7 @@ func (h *Kiroku) processWriter(filename string) (err error) {
 		return
 	}
 
-	if err = h.p(m, r); err != nil {
+	if err = k.p(m, r); err != nil {
 		err = fmt.Errorf("error encountered during processing action: <%v>", err)
 		return
 	}
@@ -227,8 +227,8 @@ func (h *Kiroku) processWriter(filename string) (err error) {
 	return
 }
 
-func (h *Kiroku) mergeChunk(m *Meta, r io.ReadSeeker) (err error) {
-	if err = h.c.merge(m, r); err != nil {
+func (k *Kiroku) mergeChunk(m *Meta, r io.ReadSeeker) (err error) {
+	if err = k.c.merge(m, r); err != nil {
 		err = fmt.Errorf("error encountered while merging: %v", err)
 		return
 	}
@@ -236,16 +236,16 @@ func (h *Kiroku) mergeChunk(m *Meta, r io.ReadSeeker) (err error) {
 	return
 }
 
-func (h *Kiroku) deleteChunk(w *Writer) (err error) {
+func (k *Kiroku) deleteChunk(w *Writer) (err error) {
 	var errs errors.ErrorList
 	errs.Push(w.close())
 	errs.Push(os.Remove(w.filename))
 	return errs.Err()
 }
 
-func (h *Kiroku) isClosed() bool {
+func (k *Kiroku) isClosed() bool {
 	select {
-	case <-h.ctx.Done():
+	case <-k.ctx.Done():
 		return true
 	default:
 		return false
