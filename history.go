@@ -16,10 +16,10 @@ import (
 
 const errBreak = errors.Error("break")
 
-// New will initialize a new History instance
+// New will initialize a new Kiroku instance
 // Note: PostProcessor is optional
-func New(dir, name string, pp Processor) (hp *History, err error) {
-	var h History
+func New(dir, name string, pp Processor) (hp *Kiroku, err error) {
+	var h Kiroku
 	prefix := fmt.Sprintf("Mojura history (%v)", name)
 	h.out = scribe.New(prefix)
 	h.dir = filepath.Clean(dir)
@@ -40,13 +40,13 @@ func New(dir, name string, pp Processor) (hp *History, err error) {
 	// It might be nice to ensure history instances are properly shut down
 	h.ctx, h.cancelFn = context.WithCancel(context.Background())
 	go h.watch()
-	// Associate returning pointer to created History
+	// Associate returning pointer to created Kiroku
 	hp = &h
 	return
 }
 
-// History represents historical DB entries
-type History struct {
+// Kiroku represents historical DB entries
+type Kiroku struct {
 	mux sync.RWMutex
 
 	out *scribe.Scribe
@@ -74,7 +74,7 @@ type History struct {
 }
 
 // Transaction will engage a new history transaction
-func (h *History) Transaction(fn func(*Writer) error) (err error) {
+func (h *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 	h.mux.Lock()
 	defer h.mux.Unlock()
 
@@ -108,8 +108,8 @@ func (h *History) Transaction(fn func(*Writer) error) (err error) {
 	return
 }
 
-// Close will close the selected instance of History
-func (h *History) Close() (err error) {
+// Close will close the selected instance of Kiroku
+func (h *Kiroku) Close() (err error) {
 	h.mux.Lock()
 	defer h.mux.Unlock()
 	if h.isClosed() {
@@ -121,11 +121,11 @@ func (h *History) Close() (err error) {
 	return errs.Err()
 }
 
-func (h *History) getTruncatedName(filename string) (name string) {
+func (h *Kiroku) getTruncatedName(filename string) (name string) {
 	return strings.Replace(filename, h.dir+"/", "", 1)
 }
 
-func (h *History) getNext() (filename string, ok bool, err error) {
+func (h *Kiroku) getNext() (filename string, ok bool, err error) {
 	fn := walkFn(func(iteratingName string, info os.FileInfo) (err error) {
 		if !h.isWriterMatch(iteratingName, info) {
 			return
@@ -144,7 +144,7 @@ func (h *History) getNext() (filename string, ok bool, err error) {
 	return
 }
 
-func (h *History) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
+func (h *Kiroku) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
 	if info.IsDir() {
 		// We are not interested in directories, return
 		return
@@ -162,7 +162,7 @@ func (h *History) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
 	return true
 }
 
-func (h *History) watch() {
+func (h *Kiroku) watch() {
 	var (
 		filename string
 
@@ -191,14 +191,14 @@ func (h *History) watch() {
 	}
 }
 
-func (h *History) waitForNext() {
+func (h *Kiroku) waitForNext() {
 	select {
 	case <-h.cs:
 	case <-h.ctx.Done():
 	}
 }
 
-func (h *History) processWriter(filename string) (err error) {
+func (h *Kiroku) processWriter(filename string) (err error) {
 	var (
 		m *Meta
 		f *os.File
@@ -227,7 +227,7 @@ func (h *History) processWriter(filename string) (err error) {
 	return
 }
 
-func (h *History) mergeChunk(m *Meta, r io.ReadSeeker) (err error) {
+func (h *Kiroku) mergeChunk(m *Meta, r io.ReadSeeker) (err error) {
 	if err = h.c.merge(m, r); err != nil {
 		err = fmt.Errorf("error encountered while merging: %v", err)
 		return
@@ -236,14 +236,14 @@ func (h *History) mergeChunk(m *Meta, r io.ReadSeeker) (err error) {
 	return
 }
 
-func (h *History) deleteChunk(w *Writer) (err error) {
+func (h *Kiroku) deleteChunk(w *Writer) (err error) {
 	var errs errors.ErrorList
 	errs.Push(w.close())
 	errs.Push(os.Remove(w.filename))
 	return errs.Err()
 }
 
-func (h *History) isClosed() bool {
+func (h *Kiroku) isClosed() bool {
 	select {
 	case <-h.ctx.Done():
 		return true

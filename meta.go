@@ -34,7 +34,7 @@ func newMetaFromFile(f *os.File) (m *Meta, err error) {
 type Meta struct {
 	// CurrentIndex would be the current index count
 	CurrentIndex int64
-	// RowCount is the number of rows contained within the History
+	// RowCount is the number of rows contained within the Kiroku
 	RowCount int64
 	// LastSnapshot is the timestamp of the last snapshot as Unix Nano
 	LastSnapshot int64

@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-func TestHistory_Transaction(t *testing.T) {
+func TestKiroku_Transaction(t *testing.T) {
 	var (
-		h   *History
+		h   *Kiroku
 		err error
 	)
 
