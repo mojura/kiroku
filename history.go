@@ -14,12 +14,15 @@ import (
 	"github.com/hatchify/errors"
 )
 
+const errBreak = errors.Error("break")
+
 // New will initialize a new History instance
 // Note: PostProcessor is optional
 func New(dir, name string, pp Processor) (hp *History, err error) {
 	var h History
-	h.out = scribe.New(fmt.Sprintf("Mojura history (%v)", name))
-	h.dir = dir
+	prefix := fmt.Sprintf("Mojura history (%v)", name)
+	h.out = scribe.New(prefix)
+	h.dir = filepath.Clean(dir)
 	h.name = name
 
 	if h.c, err = newChunk(dir, name); err != nil {
@@ -31,9 +34,12 @@ func New(dir, name string, pp Processor) (hp *History, err error) {
 		h.p = h.mergeChunk
 	}
 
+	// Initialize semaphore
+	h.cs = make(semaphore, 1)
 	// TODO: Decide if we want to offer the ability to pass a context here.
 	// It might be nice to ensure history instances are properly shut down
 	h.ctx, h.cancelFn = context.WithCancel(context.Background())
+	go h.watch()
 	// Associate returning pointer to created History
 	hp = &h
 	return
@@ -116,7 +122,7 @@ func (h *History) Close() (err error) {
 }
 
 func (h *History) getTruncatedName(filename string) (name string) {
-	return strings.Replace(filename, h.dir, "", 1)
+	return strings.Replace(filename, h.dir+"/", "", 1)
 }
 
 func (h *History) getNext() (filename string, ok bool, err error) {
@@ -128,11 +134,13 @@ func (h *History) getNext() (filename string, ok bool, err error) {
 		// We found a match, set <filename> to the iterating name and set <ok> to true
 		filename = iteratingName
 		ok = true
-		return
+		return errBreak
 	})
 
-	err = filepath.Walk(h.dir, fn)
-	fmt.Printf("Next? <%s> / %v", filename, ok)
+	if err = filepath.Walk(h.dir, fn); err == errBreak {
+		err = nil
+	}
+
 	return
 }
 
@@ -144,6 +152,8 @@ func (h *History) isChunkMatch(filename string, info os.FileInfo) (ok bool) {
 
 	// Get truncated name
 	name := h.getTruncatedName(filename)
+
+	// Check to see if filename has the needed prefix
 	if !strings.HasPrefix(name, h.name+".chunk") {
 		// We do not have a service match, return
 		return
@@ -191,10 +201,16 @@ func (h *History) waitForNext() {
 func (h *History) processChunk(filename string) (err error) {
 	var (
 		m *Meta
+		f *os.File
 		r io.ReadSeeker
 	)
 
-	if m, r, err = newProcessorPairFromFile(filename); err != nil {
+	if m, f, err = newProcessorPairFromFile(filename); err != nil {
+		return
+	}
+	defer f.Close()
+
+	if r, err = newReader(f); err != nil {
 		return
 	}
 
