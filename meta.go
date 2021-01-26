@@ -1,6 +1,9 @@
 package history
 
 import (
+	"fmt"
+	"io"
+	"os"
 	"unsafe"
 
 	"github.com/gdbu/atoms"
@@ -8,9 +11,25 @@ import (
 
 var metaSize = int64(unsafe.Sizeof(Meta{}))
 
-func newMetafromBytes(bs []byte) *Meta {
+func newMetaFromBytes(bs []byte) *Meta {
 	// Associate meta with memory mapped bytes
 	return (*Meta)(unsafe.Pointer(&bs[0]))
+}
+
+func newMetaFromFile(f *os.File) (m *Meta, err error) {
+	if _, err = f.Seek(0, 0); err != nil {
+		err = fmt.Errorf("error encountered while seeking to beginning of file: %v", err)
+		return
+	}
+
+	metaBS := make([]byte, metaSize)
+	if _, err = io.ReadAtLeast(f, metaBS, int(metaSize)); err != nil {
+		err = fmt.Errorf("error reading meta bytes: %v", err)
+		return
+	}
+
+	m = newMetaFromBytes(metaBS)
+	return
 }
 
 // Meta represents the historical meta data
