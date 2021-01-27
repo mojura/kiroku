@@ -2,19 +2,18 @@ package history
 
 import (
 	"io"
-	"os"
 
 	"github.com/mojura/enkodo"
 )
 
 // NewReader will initialize a new chunk reader
-func NewReader(f *os.File) (rp *Reader, err error) {
+func NewReader(rs io.ReadSeeker) (rp *Reader, err error) {
 	var r Reader
-	if r.m, err = newMetaFromFile(f); err != nil {
+	if r.m, err = newMetaFromReader(rs); err != nil {
 		return
 	}
 
-	r.f = f
+	r.r = rs
 	rp = &r
 	return
 }
@@ -22,7 +21,7 @@ func NewReader(f *os.File) (rp *Reader, err error) {
 // Reader will parse and read a history chunk
 type Reader struct {
 	m *Meta
-	f *os.File
+	r io.ReadSeeker
 }
 
 // Meta will return the meta information for the chunk
@@ -32,11 +31,11 @@ func (r *Reader) Meta() Meta {
 
 // ForEach will iterate through all the blocks within the reader
 func (r *Reader) ForEach(fn func(*Block) error) (err error) {
-	if _, err = r.f.Seek(metaSize, 0); err != nil {
+	if _, err = r.r.Seek(metaSize, 0); err != nil {
 		return
 	}
 
-	rdr := enkodo.NewReader(r.f)
+	rdr := enkodo.NewReader(r.r)
 	for {
 		var b Block
 		if err = rdr.Decode(&b); err != nil {
@@ -57,18 +56,18 @@ func (r *Reader) ForEach(fn func(*Block) error) (err error) {
 
 // Copy will copy the entire chunk (meta + blocks)
 func (r *Reader) Copy(destination io.Writer) (n int64, err error) {
-	if _, err = r.f.Seek(0, 0); err != nil {
+	if _, err = r.r.Seek(0, 0); err != nil {
 		return
 	}
 
-	return io.Copy(destination, r.f)
+	return io.Copy(destination, r.r)
 }
 
 // CopyBlocks will copy the blocks only (no meta)
 func (r *Reader) CopyBlocks(destination io.Writer) (n int64, err error) {
-	if _, err = r.f.Seek(metaSize, 0); err != nil {
+	if _, err = r.r.Seek(metaSize, 0); err != nil {
 		return
 	}
 
-	return io.Copy(destination, r.f)
+	return io.Copy(destination, r.r)
 }

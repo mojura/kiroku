@@ -3,7 +3,6 @@ package history
 import (
 	"fmt"
 	"io"
-	"os"
 	"unsafe"
 )
 
@@ -14,14 +13,14 @@ func newMetaFromBytes(bs []byte) *Meta {
 	return (*Meta)(unsafe.Pointer(&bs[0]))
 }
 
-func newMetaFromFile(f *os.File) (m *Meta, err error) {
-	if _, err = f.Seek(0, 0); err != nil {
+func newMetaFromReader(r io.ReadSeeker) (m *Meta, err error) {
+	if _, err = r.Seek(0, 0); err != nil {
 		err = fmt.Errorf("error encountered while seeking to beginning of file: %v", err)
 		return
 	}
 
 	metaBS := make([]byte, metaSize)
-	if _, err = io.ReadAtLeast(f, metaBS, int(metaSize)); err != nil {
+	if _, err = io.ReadAtLeast(r, metaBS, int(metaSize)); err != nil {
 		err = fmt.Errorf("error reading meta bytes: %v", err)
 		return
 	}
