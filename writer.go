@@ -95,7 +95,6 @@ func (w *Writer) init(m *Meta, createdAt int64) {
 func (w *Writer) merge(m *Meta, r io.Reader) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
-
 	if m.CreatedAt <= w.m.CreatedAt {
 		return
 	}
