@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -44,7 +45,12 @@ func New(dir, name string, pp Processor) (kp *Kiroku, err error) {
 	// TODO: Decide if we want to offer the ability to pass a context here.
 	// It might be nice to ensure history instances are properly shut down
 	k.ctx, k.cancelFn = context.WithCancel(context.Background())
+
+	// Increment jobs waiter
+	k.jobs.Add(1)
+	// Initialize watch job
 	go k.watch()
+
 	// Associate returning pointer to created Kiroku
 	kp = &k
 	return
@@ -69,6 +75,9 @@ type Kiroku struct {
 	// Writer semaphore
 	cs semaphore
 
+	// Goroutine job waiter
+	jobs sync.WaitGroup
+
 	// Post processing func
 	p Processor
 
@@ -85,7 +94,7 @@ func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 
 	now := time.Now()
 	unix := now.UnixNano()
-	name := fmt.Sprintf("%s.chunk.%d", k.name, unix)
+	name := fmt.Sprintf("%s.tmp.chunk.%d", k.name, unix)
 
 	var c *Writer
 	if c, err = newWriter(k.dir, name); err != nil {
@@ -108,6 +117,13 @@ func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 		return
 	}
 
+	newName := fmt.Sprintf("%s.chunk.%d", k.name, unix)
+	newFilename := path.Join(k.dir, newName)
+	if err = os.Rename(c.filename, newFilename); err != nil {
+		err = fmt.Errorf("error renaming chunk from <%s> to <%s>: %v", name, newName, err)
+		return
+	}
+
 	k.cs.send()
 	k.m = newMeta
 	return
@@ -120,6 +136,12 @@ func (k *Kiroku) Close() (err error) {
 	if k.isClosed() {
 		return errors.ErrIsClosed
 	}
+
+	// Cancel the context
+	k.cancelFn()
+
+	// Wait for jobs to finish
+	k.jobs.Wait()
 
 	var errs errors.ErrorList
 	errs.Push(k.c.close())
@@ -218,6 +240,13 @@ func (k *Kiroku) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
 	return true
 }
 
+func (k *Kiroku) sleep(d time.Duration) {
+	select {
+	case <-time.NewTimer(d).C:
+	case <-k.ctx.Done():
+	}
+}
+
 func (k *Kiroku) watch() {
 	var (
 		filename string
@@ -230,7 +259,7 @@ func (k *Kiroku) watch() {
 		if filename, ok, err = k.getNext(); err != nil {
 			// TODO: Get teams input on if this value should be configurable
 			k.out.Errorf("error getting next chunk filename: <%v>, sleeping for a minute and trying again", err)
-			time.Sleep(time.Minute)
+			k.sleep(time.Minute)
 			continue
 		}
 
@@ -239,12 +268,18 @@ func (k *Kiroku) watch() {
 			continue
 		}
 
+		if k.isClosed() {
+			break
+		}
+
 		if err = k.processWriter(filename); err != nil {
 			// TODO: Get teams input on the best course of action here
-			k.out.Errorf("error encountered during processing chunk: <%v>, sleeping for a minute and trying again", err)
-			time.Sleep(time.Minute)
+			k.out.Errorf("error encountered during processing chunk \"%s\": <%v>, sleeping for a minute and trying again", filename, err)
+			k.sleep(time.Minute)
 		}
 	}
+
+	k.jobs.Done()
 }
 
 func (k *Kiroku) waitForNext() {
@@ -274,6 +309,7 @@ func (k *Kiroku) processWriter(filename string) (err error) {
 		err = fmt.Errorf("error encountered during processing action: <%v>", err)
 		return
 	}
+	f.Close()
 
 	if err = os.Remove(filename); err != nil {
 		err = fmt.Errorf("error encountered while removing file: <%v>", err)
