@@ -30,6 +30,11 @@ func New(dir, name string, pp Processor) (kp *Kiroku, err error) {
 		return
 	}
 
+	if err = k.initMeta(); err != nil {
+		err = fmt.Errorf("error initializing meta: %v", err)
+		return
+	}
+
 	if k.p = pp; k.p == nil {
 		k.p = k.mergeChunk
 	}
@@ -127,26 +132,19 @@ func (k *Kiroku) initMeta() (err error) {
 		ok       bool
 	)
 
-	if filename, ok, err = k.getLast(); err != nil {
+	filename, ok, err = k.getLast()
+	switch {
+	case err != nil:
 		return
-	}
-
-	if !ok {
+	case !ok:
 		k.m = *k.c.m
 		return
+	default:
+		return Read(filename, k.setMetaFromReader)
 	}
+}
 
-	var f *os.File
-	if f, err = os.Open(filename); err != nil {
-		return
-	}
-	defer f.Close()
-
-	var r *Reader
-	if r, err = NewReader(f); err != nil {
-		return
-	}
-
+func (k *Kiroku) setMetaFromReader(r *Reader) (err error) {
 	k.m = r.Meta()
 	return
 }
