@@ -121,6 +121,36 @@ func (k *Kiroku) Close() (err error) {
 	return errs.Err()
 }
 
+func (k *Kiroku) initMeta() (err error) {
+	var (
+		filename string
+		ok       bool
+	)
+
+	if filename, ok, err = k.getLast(); err != nil {
+		return
+	}
+
+	if !ok {
+		k.m = *k.c.m
+		return
+	}
+
+	var f *os.File
+	if f, err = os.Open(filename); err != nil {
+		return
+	}
+	defer f.Close()
+
+	var r *Reader
+	if r, err = NewReader(f); err != nil {
+		return
+	}
+
+	k.m = r.Meta()
+	return
+}
+
 func (k *Kiroku) getTruncatedName(filename string) (name string) {
 	return strings.Replace(filename, k.dir+"/", "", 1)
 }
@@ -135,6 +165,34 @@ func (k *Kiroku) getNext() (filename string, ok bool, err error) {
 		filename = iteratingName
 		ok = true
 		return errBreak
+	})
+
+	if err = filepath.Walk(k.dir, fn); err == errBreak {
+		err = nil
+	}
+
+	return
+}
+
+func (k *Kiroku) getLast() (filename string, ok bool, err error) {
+	fn := walkFn(func(iteratingName string, info os.FileInfo) (err error) {
+		isMatch := k.isWriterMatch(iteratingName, info)
+		switch {
+		case !isMatch && !ok:
+			// We do not have a match, and we have not matched yet. Return and search
+			// for more!
+			return
+		case !isMatch && ok:
+			// We do not have a match, and we have matched before. We have exceeded
+			// the range of our prefix. Return errBreak
+			return errBreak
+
+		default:
+			// We found a match, set <filename> to the iterating name and set <ok> to true
+			filename = iteratingName
+			ok = true
+			return
+		}
 	})
 
 	if err = filepath.Walk(k.dir, fn); err == errBreak {
