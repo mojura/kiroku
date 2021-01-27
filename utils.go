@@ -25,3 +25,19 @@ func walkFn(fn func(string, os.FileInfo) error) filepath.WalkFunc {
 		return fn(filename, info)
 	}
 }
+
+// Read will read a filename and provide a temporary reader
+func Read(filename string, fn func(*Reader) error) (err error) {
+	var f *os.File
+	if f, err = os.Open(filename); err != nil {
+		return
+	}
+	defer f.Close()
+
+	var r *Reader
+	if r, err = NewReader(f); err != nil {
+		return
+	}
+
+	return fn(r)
+}
