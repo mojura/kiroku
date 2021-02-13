@@ -1,9 +1,7 @@
 package history
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"testing"
 )
@@ -70,14 +68,12 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("./test_data", "tester", func(m *Meta, r io.ReadSeeker) (err error) {
-		buf := bytes.NewBuffer(nil)
-		if _, err = io.Copy(buf, r); err != nil {
-			return
-		}
-
+	pfn := func(r *Reader) (err error) {
+		fmt.Println("Meta!", r.Meta())
 		return
-	}); err != nil {
+	}
+
+	if k, err = New("./test_data", "tester", pfn); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -96,7 +92,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if k, err = New("test_data", "tester", nil); err != nil {
+	if k, err = New("test_data", "tester", pfn); err != nil {
 		t.Fatal(err)
 		return
 	}
