@@ -1,4 +1,4 @@
-module github.com/mojura/history
+module github.com/mojura/kiroku
 
 go 1.15
 
