@@ -2,7 +2,6 @@ package history
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"sync"
@@ -92,20 +91,21 @@ func (w *Writer) init(m *Meta, createdAt int64) {
 	w.m.CreatedAt = createdAt
 }
 
-func (w *Writer) merge(m *Meta, r io.Reader) (err error) {
+func (w *Writer) merge(r *Reader) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
+	m := r.Meta()
 	if m.CreatedAt <= w.m.CreatedAt {
 		return
 	}
 
 	// Copy remaining bytes to chunk
-	if _, err = io.Copy(w.f, r); err != nil {
+	if _, err = r.CopyBlocks(w.f); err != nil {
 		return
 	}
 
 	// Merge new meta with existing meta
-	w.m.merge(m)
+	w.m.merge(&m)
 	return
 }
 
