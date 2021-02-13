@@ -26,7 +26,7 @@ func New(dir, name string, p Processor) (kp *Kiroku, err error) {
 // Note: Processor is optional
 func NewWithContext(ctx context.Context, dir, name string, p Processor) (kp *Kiroku, err error) {
 	var k Kiroku
-	prefix := fmt.Sprintf("Mojura history (%v)", name)
+	prefix := fmt.Sprintf("Kiroku (%v)", name)
 	k.out = scribe.New(prefix)
 	k.dir = filepath.Clean(dir)
 	k.name = name
@@ -131,17 +131,6 @@ func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 
 	k.ms.send()
 	k.m = newMeta
-	return
-}
-
-func (k *Kiroku) rename(filename, targetPrefix string, unix int64) (err error) {
-	newName := fmt.Sprintf("%s.%s.%d", k.name, targetPrefix, unix)
-	newFilename := path.Join(k.dir, newName)
-	if err = os.Rename(filename, newFilename); err != nil {
-		err = fmt.Errorf("error renaming %s from <%s> to <%s>: %v", targetPrefix, filename, newName, err)
-		return
-	}
-
 	return
 }
 
@@ -256,11 +245,29 @@ func (k *Kiroku) isWriterMatch(targetPrefix, filename string, info os.FileInfo) 
 	return true
 }
 
+func (k *Kiroku) waitForNext(s semaphore) {
+	select {
+	case <-s:
+	case <-k.ctx.Done():
+	}
+}
+
 func (k *Kiroku) sleep(d time.Duration) {
 	select {
 	case <-time.NewTimer(d).C:
 	case <-k.ctx.Done():
 	}
+}
+
+func (k *Kiroku) rename(filename, targetPrefix string, unix int64) (err error) {
+	newName := fmt.Sprintf("%s.%s.%d", k.name, targetPrefix, unix)
+	newFilename := path.Join(k.dir, newName)
+	if err = os.Rename(filename, newFilename); err != nil {
+		err = fmt.Errorf("error renaming %s from <%s> to <%s>: %v", targetPrefix, filename, newName, err)
+		return
+	}
+
+	return
 }
 
 func (k *Kiroku) watch(targetPrefix string, s semaphore, fn func(filename string) error) {
@@ -296,13 +303,6 @@ func (k *Kiroku) watch(targetPrefix string, s semaphore, fn func(filename string
 	}
 
 	k.jobs.Done()
-}
-
-func (k *Kiroku) waitForNext(s semaphore) {
-	select {
-	case <-s:
-	case <-k.ctx.Done():
-	}
 }
 
 func (k *Kiroku) merge(filename string) (err error) {
