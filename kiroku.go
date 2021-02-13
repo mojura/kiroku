@@ -3,7 +3,6 @@ package history
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,8 +17,14 @@ import (
 const errBreak = errors.Error("break")
 
 // New will initialize a new Kiroku instance
-// Note: PostProcessor is optional
-func New(dir, name string, pp Processor) (kp *Kiroku, err error) {
+// Note: Processor is optional
+func New(dir, name string, p Processor) (kp *Kiroku, err error) {
+	return NewWithContext(context.Background(), dir, name, p)
+}
+
+// NewWithContext will initialize a new Kiroku instance with a provided context.Context
+// Note: Processor is optional
+func NewWithContext(ctx context.Context, dir, name string, p Processor) (kp *Kiroku, err error) {
 	var k Kiroku
 	prefix := fmt.Sprintf("Mojura history (%v)", name)
 	k.out = scribe.New(prefix)
@@ -36,20 +41,21 @@ func New(dir, name string, pp Processor) (kp *Kiroku, err error) {
 		return
 	}
 
-	if k.p = pp; k.p == nil {
-		k.p = k.mergeChunk
-	}
-
-	// Initialize semaphore
-	k.cs = make(semaphore, 1)
+	// Set processor
+	// Note: This field is optional and might be nil
+	k.p = p
+	// Initialize semaphores
+	k.ms = make(semaphore, 1)
+	k.ps = make(semaphore, 1)
 	// TODO: Decide if we want to offer the ability to pass a context here.
 	// It might be nice to ensure history instances are properly shut down
 	k.ctx, k.cancelFn = context.WithCancel(context.Background())
 
 	// Increment jobs waiter
-	k.jobs.Add(1)
+	k.jobs.Add(2)
 	// Initialize watch job
-	go k.watch()
+	go k.watch("chunk", k.ms, k.merge)
+	go k.watch("merged", k.ps, k.processAndRemove)
 
 	// Associate returning pointer to created Kiroku
 	kp = &k
@@ -72,8 +78,10 @@ type Kiroku struct {
 	// Name of service
 	name string
 
-	// Writer semaphore
-	cs semaphore
+	// Merging semaphore
+	ms semaphore
+	// Processing semaphore
+	ps semaphore
 
 	// Goroutine job waiter
 	jobs sync.WaitGroup
@@ -117,15 +125,23 @@ func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 		return
 	}
 
-	newName := fmt.Sprintf("%s.chunk.%d", k.name, unix)
-	newFilename := path.Join(k.dir, newName)
-	if err = os.Rename(c.filename, newFilename); err != nil {
-		err = fmt.Errorf("error renaming chunk from <%s> to <%s>: %v", name, newName, err)
+	if err = k.rename(c.filename, "chunk", unix); err != nil {
 		return
 	}
 
-	k.cs.send()
+	k.ms.send()
 	k.m = newMeta
+	return
+}
+
+func (k *Kiroku) rename(filename, targetPrefix string, unix int64) (err error) {
+	newName := fmt.Sprintf("%s.%s.%d", k.name, targetPrefix, unix)
+	newFilename := path.Join(k.dir, newName)
+	if err = os.Rename(filename, newFilename); err != nil {
+		err = fmt.Errorf("error renaming %s from <%s> to <%s>: %v", targetPrefix, filename, newName, err)
+		return
+	}
+
 	return
 }
 
@@ -154,7 +170,7 @@ func (k *Kiroku) initMeta() (err error) {
 		ok       bool
 	)
 
-	filename, ok, err = k.getLast()
+	filename, ok, err = k.getLast("chunk")
 	switch {
 	case err != nil:
 		return
@@ -175,9 +191,9 @@ func (k *Kiroku) getTruncatedName(filename string) (name string) {
 	return strings.Replace(filename, k.dir+"/", "", 1)
 }
 
-func (k *Kiroku) getNext() (filename string, ok bool, err error) {
+func (k *Kiroku) getNext(targetPrefix string) (filename string, ok bool, err error) {
 	fn := walkFn(func(iteratingName string, info os.FileInfo) (err error) {
-		if !k.isWriterMatch(iteratingName, info) {
+		if !k.isWriterMatch(targetPrefix, iteratingName, info) {
 			return
 		}
 
@@ -194,9 +210,9 @@ func (k *Kiroku) getNext() (filename string, ok bool, err error) {
 	return
 }
 
-func (k *Kiroku) getLast() (filename string, ok bool, err error) {
+func (k *Kiroku) getLast(targetPrefix string) (filename string, ok bool, err error) {
 	fn := walkFn(func(iteratingName string, info os.FileInfo) (err error) {
-		isMatch := k.isWriterMatch(iteratingName, info)
+		isMatch := k.isWriterMatch(targetPrefix, iteratingName, info)
 		switch {
 		case !isMatch && !ok:
 			// We do not have a match, and we have not matched yet. Return and search
@@ -222,7 +238,7 @@ func (k *Kiroku) getLast() (filename string, ok bool, err error) {
 	return
 }
 
-func (k *Kiroku) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
+func (k *Kiroku) isWriterMatch(targetPrefix, filename string, info os.FileInfo) (ok bool) {
 	if info.IsDir() {
 		// We are not interested in directories, return
 		return
@@ -232,7 +248,7 @@ func (k *Kiroku) isWriterMatch(filename string, info os.FileInfo) (ok bool) {
 	name := k.getTruncatedName(filename)
 
 	// Check to see if filename has the needed prefix
-	if !strings.HasPrefix(name, k.name+".chunk") {
+	if !strings.HasPrefix(name, k.name+"."+targetPrefix) {
 		// We do not have a service match, return
 		return
 	}
@@ -247,7 +263,7 @@ func (k *Kiroku) sleep(d time.Duration) {
 	}
 }
 
-func (k *Kiroku) watch() {
+func (k *Kiroku) watch(targetPrefix string, s semaphore, fn func(filename string) error) {
 	var (
 		filename string
 
@@ -256,15 +272,15 @@ func (k *Kiroku) watch() {
 	)
 
 	for !k.isClosed() {
-		if filename, ok, err = k.getNext(); err != nil {
+		if filename, ok, err = k.getNext(targetPrefix); err != nil {
 			// TODO: Get teams input on if this value should be configurable
-			k.out.Errorf("error getting next chunk filename: <%v>, sleeping for a minute and trying again", err)
+			k.out.Errorf("error getting next %s filename: <%v>, sleeping for a minute and trying again", targetPrefix, err)
 			k.sleep(time.Minute)
 			continue
 		}
 
 		if !ok {
-			k.waitForNext()
+			k.waitForNext(s)
 			continue
 		}
 
@@ -272,9 +288,9 @@ func (k *Kiroku) watch() {
 			break
 		}
 
-		if err = k.processWriter(filename); err != nil {
+		if err = fn(filename); err != nil {
 			// TODO: Get teams input on the best course of action here
-			k.out.Errorf("error encountered during processing chunk \"%s\": <%v>, sleeping for a minute and trying again", filename, err)
+			k.out.Errorf("error encountered during action for <%s>: <%v>, sleeping for a minute and trying again", filename, err)
 			k.sleep(time.Minute)
 		}
 	}
@@ -282,46 +298,50 @@ func (k *Kiroku) watch() {
 	k.jobs.Done()
 }
 
-func (k *Kiroku) waitForNext() {
+func (k *Kiroku) waitForNext(s semaphore) {
 	select {
-	case <-k.cs:
+	case <-s:
 	case <-k.ctx.Done():
 	}
 }
 
-func (k *Kiroku) processWriter(filename string) (err error) {
-	var (
-		m *Meta
-		f *os.File
-		r io.ReadSeeker
-	)
+func (k *Kiroku) merge(filename string) (err error) {
+	// Set current Unix timestamp
+	unix := time.Now().UnixNano()
 
-	if m, f, err = newProcessorPair(filename); err != nil {
-		return
-	}
-	defer f.Close()
-
-	if r, err = newReader(f); err != nil {
+	if err = Read(filename, k.c.merge); err != nil {
+		err = fmt.Errorf("error encountered while merging: %v", err)
 		return
 	}
 
-	if err = k.p(m, r); err != nil {
-		err = fmt.Errorf("error encountered during processing action: <%v>", err)
+	if err = k.rename(filename, "merged", unix); err != nil {
 		return
 	}
-	f.Close()
 
-	if err = os.Remove(filename); err != nil {
-		err = fmt.Errorf("error encountered while removing file: <%v>", err)
+	k.ps.send()
+	return
+}
+
+func (k *Kiroku) process(filename string) (err error) {
+	if k.p == nil {
+		return
+	}
+
+	if err = Read(filename, k.p); err != nil {
+		err = fmt.Errorf("error encountered while processing: %v", err)
 		return
 	}
 
 	return
 }
 
-func (k *Kiroku) mergeChunk(m *Meta, r io.ReadSeeker) (err error) {
-	if err = k.c.merge(m, r); err != nil {
-		err = fmt.Errorf("error encountered while merging: %v", err)
+func (k *Kiroku) processAndRemove(filename string) (err error) {
+	if err = k.process(filename); err != nil {
+		return
+	}
+
+	if err = os.Remove(filename); err != nil {
+		err = fmt.Errorf("error encountered while removing file: <%v>", err)
 		return
 	}
 
