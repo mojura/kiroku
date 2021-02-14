@@ -2,15 +2,19 @@ package history
 
 type semaphore chan struct{}
 
+// send will attempt to send a signal to a semaphore
+// Note: This function is non-blocking
 func (s semaphore) send() {
 	select {
+	// Attempt to send signal
 	case s <- struct{}{}:
-		// Receiver is waiting for signal
+		// There was space in the semaphore for the signal
 	default:
-		// Semaphore is full
+		// Semaphore is full, continue on
 	}
 }
 
 func (s semaphore) receive() {
+	// Wait for semaphore signal
 	<-s
 }

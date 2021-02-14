@@ -15,13 +15,18 @@ import (
 // newWriter will initialize a new Writer instance
 func newWriter(dir, name string) (wp *Writer, err error) {
 	var w Writer
+	// Set filename as a combination of the provided directory, name, and a .moj extension
 	w.filename = path.Join(dir, name+".moj")
+	// Open target file
+	// Note: This will create the file if it does not exist
 	if w.f, err = os.OpenFile(w.filename, os.O_CREATE|os.O_RDWR, 0744); err != nil {
 		err = fmt.Errorf("error opening file \"%s\": %v", w.filename, err)
 		return
 	}
+	// Whenever function ends, close the Writer if an error was encountered
 	defer w.closeIfError(err)
 
+	// Associate meta with memory map of meta bytes within the Chunk
 	if err = w.mapMeta(); err != nil {
 		return
 	}
@@ -55,13 +60,34 @@ type Writer struct {
 	filename string
 }
 
-// GetIndex will get the index value
+// GetIndex will get the current index value
 func (w *Writer) GetIndex() (index int64) {
+	w.mux.RLock()
+	defer w.mux.RUnlock()
+
+	// Return current index
 	return w.m.CurrentIndex
 }
 
+// NextIndex will get the current index value then increment the internal value
+func (w *Writer) NextIndex() (index int64) {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+
+	// Get current index
+	index = w.m.CurrentIndex
+	// Increment current index
+	w.m.CurrentIndex++
+	return
+}
+
 // SetIndex will set the index value
+// Note: This can be used to manually set an index to a desired value
 func (w *Writer) SetIndex(index int64) {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+
+	// Set current index as the provided index
 	w.m.CurrentIndex = index
 }
 
@@ -94,13 +120,19 @@ func (w *Writer) init(m *Meta, createdAt int64) {
 func (w *Writer) merge(r *Reader) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
+
+	// Get Meta of Reader
 	m := r.Meta()
+
+	// Check to see if the Meta has already been consumed
 	if m.CreatedAt <= w.m.CreatedAt {
+		// Meta is stale, return
 		return
 	}
 
 	// Copy remaining bytes to chunk
 	if _, err = r.CopyBlocks(w.f); err != nil {
+		err = fmt.Errorf("error encountered while copying source blocks: %v", err)
 		return
 	}
 
@@ -111,15 +143,19 @@ func (w *Writer) merge(r *Reader) (err error) {
 
 func (w *Writer) setSize() (err error) {
 	var fi os.FileInfo
+	// Get file information
 	if fi, err = w.f.Stat(); err != nil {
 		err = fmt.Errorf("error getting file information: %v", err)
 		return
 	}
 
+	// Check file size
 	if fi.Size() >= metaSize {
+		// File is at least as big as Meta size, nothing else is needed!
 		return
 	}
 
+	// Extend file to be big enough for the Meta bytes
 	if err = w.f.Truncate(metaSize); err != nil {
 		err = fmt.Errorf("error setting file size to %d: %v", metaSize, err)
 		return
@@ -129,24 +165,27 @@ func (w *Writer) setSize() (err error) {
 }
 
 func (w *Writer) mapMeta() (err error) {
+	// Ensure underlying file is big enough for Meta bytes
 	if err = w.setSize(); err != nil {
 		err = fmt.Errorf("error setting size: %v", err)
 		return
 	}
 
-	// Map bytes equal to the size of the meta
+	// Map bytes equal to the size of the Meta
 	if w.mm, err = mmap.MapRegion(w.f, int(metaSize), os.O_RDWR, 0, 0); err != nil {
 		err = fmt.Errorf("error initializing MMAP: %v", err)
 		return
 	}
 
-	// Associate meta with memory mapped bytes
+	// Associate Meta with memory mapped bytes
 	w.m = (*Meta)(unsafe.Pointer(&w.mm[0]))
 	return
 }
 
 func (w *Writer) unmapMeta() (err error) {
+	// Ensure MMAP is set
 	if w.mm == nil {
+		// MMAP not set, return
 		return
 	}
 
