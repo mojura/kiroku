@@ -1,4 +1,4 @@
-package history
+package kiroku
 
 import "github.com/mojura/enkodo"
 

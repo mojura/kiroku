@@ -1,4 +1,4 @@
-package history
+package kiroku
 
 type semaphore chan struct{}
 
