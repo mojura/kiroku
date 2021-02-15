@@ -11,6 +11,8 @@ const (
 	TypeComment
 )
 
+const invalidTypeLayout = "invalid type, <%d> is not supported"
+
 // Type represents a block type
 type Type uint8
 
@@ -23,7 +25,7 @@ func (t Type) Validate() (err error) {
 
 	default:
 		// Currently set as an unsupported type, return error
-		return fmt.Errorf("invalid type, <%d> is not supported", t)
+		return fmt.Errorf(invalidTypeLayout, t)
 	}
 
 	return
