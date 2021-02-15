@@ -134,7 +134,7 @@ func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 		// Error encountered, delete chunk!
 		if deleteErr := k.deleteChunk(c); deleteErr != nil {
 			// Error encountered while deleting chunk, leave error log to notify server manager
-			k.out.Errorf("error deleting chunk <%s>: %v", name, err)
+			k.out.Errorf("error deleting chunk <%s>: %v", name, deleteErr)
 		}
 
 		// Return error from provided function
