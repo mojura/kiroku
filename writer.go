@@ -200,6 +200,7 @@ func (w *Writer) unmapMeta() (err error) {
 
 func (w *Writer) close() (err error) {
 	var errs errors.ErrorList
+	errs.Push(w.w.Close())
 	errs.Push(w.unmapMeta())
 	errs.Push(w.f.Close())
 	return errs.Err()
