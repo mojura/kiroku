@@ -3,8 +3,10 @@ package kiroku
 import "fmt"
 
 const (
+	// TypeUnset represents an unset block type
+	TypeUnset Type = iota
 	// TypeWriteAction represents a write action block
-	TypeWriteAction Type = iota
+	TypeWriteAction
 	// TypeDeleteAction represets a delete action block
 	TypeDeleteAction
 	// TypeComment represents a comment block
@@ -34,6 +36,8 @@ func (t Type) Validate() (err error) {
 // Validate will ensure a type is valid
 func (t Type) String() string {
 	switch t {
+	case TypeUnset:
+		return "unset"
 	case TypeWriteAction:
 		return "write"
 	case TypeDeleteAction:
