@@ -101,7 +101,6 @@ func TestReader_ForEach(t *testing.T) {
 
 	var lastBlockSize int64
 	for i := 0; i < len(tcs); i++ {
-		fmt.Println("Iteration ", i, lastBlockSize)
 		var count int
 		if err = r.ForEach(lastBlockSize, func(b *Block) (err error) {
 			tc := tcs[count+i]
@@ -260,7 +259,6 @@ func populateReaderTestcase(w *Writer, tcs []readerTestcase) (err error) {
 		}
 
 		w.SetIndex(tc.index)
-		fmt.Println("Total block size!", w.m.TotalBlockSize)
 		tcs[i].lastBlockSize = w.m.TotalBlockSize
 	}
 
