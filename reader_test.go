@@ -66,8 +66,8 @@ func TestReader_Meta(t *testing.T) {
 		t.Fatalf("invalid index, expected %d and received %d", last.index, meta.CurrentIndex)
 	}
 
-	if meta.RowCount != int64(len(tcs)) {
-		t.Fatalf("invalid row count, expected %d and received %d", len(tcs), meta.RowCount)
+	if meta.BlockCount != int64(len(tcs)) {
+		t.Fatalf("invalid row count, expected %d and received %d", len(tcs), meta.BlockCount)
 	}
 }
 
