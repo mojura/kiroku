@@ -45,6 +45,8 @@ type Meta struct {
 	CurrentIndex int64
 	// BlockCount is the number of blocks contained within the Chunk
 	BlockCount int64
+	// TotalBlockSize is the total block size (in bytes)
+	TotalBlockSize int64
 
 	// LastSnapshot is the timestamp of the last snapshot as Unix Nano
 	LastSnapshot int64
@@ -59,6 +61,10 @@ func (m *Meta) merge(in *Meta) {
 		return
 	}
 
+	mm := *in
+	// Set total block size as a combination of the merging meta and the parent
+	mm.TotalBlockSize += m.TotalBlockSize
+
 	// Set the underlying Meta as the dereferenced value of the inbound Meta
-	*m = *in
+	*m = mm
 }
