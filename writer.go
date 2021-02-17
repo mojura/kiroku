@@ -107,6 +107,8 @@ func (w *Writer) AddRow(t Type, data []byte) (err error) {
 
 	// Increment row count
 	w.m.BlockCount++
+	// Set total block size
+	w.m.TotalBlockSize = w.w.Written()
 	return
 }
 

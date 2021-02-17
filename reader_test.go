@@ -10,7 +10,7 @@ import (
 	"github.com/mojura/enkodo"
 )
 
-var readerTestcases = []readerTestcase{
+var readerTestcases = [4]readerTestcase{
 	{
 		t:     TypeWriteAction,
 		data:  "foo 1",
@@ -51,7 +51,7 @@ func TestReader_Meta(t *testing.T) {
 		return
 	}
 
-	if err = populateReaderTestcase(c, tcs); err != nil {
+	if err = populateReaderTestcase(c, tcs[:]); err != nil {
 		t.Fatal(err)
 	}
 
@@ -89,7 +89,7 @@ func TestReader_ForEach(t *testing.T) {
 		return
 	}
 
-	if err = populateReaderTestcase(c, tcs); err != nil {
+	if err = populateReaderTestcase(c, tcs[:]); err != nil {
 		t.Fatal(err)
 	}
 
@@ -99,23 +99,29 @@ func TestReader_ForEach(t *testing.T) {
 		return
 	}
 
-	var count int
-	if err = r.ForEach(0, func(b *Block) (err error) {
-		tc := tcs[count]
-		if str := string(b.Data); str != tc.data {
-			err = fmt.Errorf("invalid data, expected <%s> and received <%s>", tc.data, str)
+	var lastBlockSize int64
+	for i := 0; i < len(tcs); i++ {
+		fmt.Println("Iteration ", i, lastBlockSize)
+		var count int
+		if err = r.ForEach(lastBlockSize, func(b *Block) (err error) {
+			tc := tcs[count+i]
+			if str := string(b.Data); str != tc.data {
+				err = fmt.Errorf("invalid data, expected <%s> and received <%s>", tc.data, str)
+				return
+			}
+
+			count++
+			return
+		}); err != nil {
+			t.Fatalf("error during iteration: %v", err)
 			return
 		}
 
-		count++
-		return
-	}); err != nil {
-		t.Fatalf("error during iteration: %v", err)
-		return
-	}
+		if expectedTotal := len(tcs) - i; count != expectedTotal {
+			t.Fatalf("invalid number of iterations, expected %d and received %d", expectedTotal, count)
+		}
 
-	if count != len(tcs) {
-		t.Fatalf("invalid number of iterations, expected %d and received %d", len(tcs), count)
+		lastBlockSize = tcs[i].lastBlockSize
 	}
 }
 
@@ -135,7 +141,7 @@ func TestReader_Copy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = populateReaderTestcase(c, tcs); err != nil {
+	if err = populateReaderTestcase(c, tcs[:]); err != nil {
 		t.Fatal(err)
 	}
 
@@ -192,7 +198,7 @@ func TestReader_CopyBlocks(t *testing.T) {
 		return
 	}
 
-	if err = populateReaderTestcase(c, tcs); err != nil {
+	if err = populateReaderTestcase(c, tcs[:]); err != nil {
 		t.Fatal(err)
 	}
 
@@ -242,16 +248,20 @@ type readerTestcase struct {
 	t     Type
 	data  string
 	index int64
+
+	lastBlockSize int64
 }
 
 func populateReaderTestcase(w *Writer, tcs []readerTestcase) (err error) {
-	for _, tc := range tcs {
+	for i, tc := range tcs {
 		if err = w.AddRow(tc.t, []byte(tc.data)); err != nil {
 			err = fmt.Errorf("error adding row: %v", err)
 			return
 		}
 
 		w.SetIndex(tc.index)
+		fmt.Println("Total block size!", w.m.TotalBlockSize)
+		tcs[i].lastBlockSize = w.m.TotalBlockSize
 	}
 
 	if _, err = w.f.Seek(0, 0); err != nil {
