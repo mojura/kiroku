@@ -100,7 +100,7 @@ func TestReader_ForEach(t *testing.T) {
 	}
 
 	var count int
-	if err = r.ForEach(func(b *Block) (err error) {
+	if err = r.ForEach(0, func(b *Block) (err error) {
 		tc := tcs[count]
 		if str := string(b.Data); str != tc.data {
 			err = fmt.Errorf("invalid data, expected <%s> and received <%s>", tc.data, str)
@@ -156,7 +156,7 @@ func TestReader_Copy(t *testing.T) {
 	}
 
 	var count int
-	if err = cr.ForEach(func(b *Block) (err error) {
+	if err = cr.ForEach(0, func(b *Block) (err error) {
 		tc := tcs[count]
 		if str := string(b.Data); str != tc.data {
 			err = fmt.Errorf("invalid data, expected <%s> and received <%s>", tc.data, str)

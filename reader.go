@@ -54,9 +54,9 @@ func (r *Reader) Meta() Meta {
 }
 
 // ForEach will iterate through all the blocks within the reader
-func (r *Reader) ForEach(fn func(*Block) error) (err error) {
+func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
 	// Seek to the first block byte
-	if _, err = r.r.Seek(metaSize, 0); err != nil {
+	if _, err = r.r.Seek(metaSize+seek, 0); err != nil {
 		err = fmt.Errorf("error seeking to first block byte: %v", err)
 		return
 	}
