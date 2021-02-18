@@ -400,7 +400,7 @@ func testForEach(r *Reader, tcs []readerTestcase) (err error) {
 type readerTestcase struct {
 	t     Type
 	data  string
-	index int64
+	index uint64
 
 	lastBlockSize int64
 }

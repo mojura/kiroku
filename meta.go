@@ -42,14 +42,15 @@ func newMetaFromReader(r io.ReadSeeker) (m Meta, err error) {
 // Meta represents the historical meta data
 type Meta struct {
 	// CurrentIndex would be the current index count
-	CurrentIndex int64
+	CurrentIndex uint64
+
 	// BlockCount is the number of blocks contained within the Chunk
 	BlockCount int64
 	// TotalBlockSize is the total block size (in bytes)
 	TotalBlockSize int64
 
-	// LastSnapshot is the timestamp of the last snapshot as Unix Nano
-	LastSnapshot int64
+	// LastSnapshotAt is the timestamp of the last snapshot as Unix Nano
+	LastSnapshotAt int64
 	// CreatedAt is a UnixNano timestamp of when the last chunk was created
 	CreatedAt int64
 }

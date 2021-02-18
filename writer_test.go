@@ -48,8 +48,8 @@ func TestWriter_NextIndex(t *testing.T) {
 		return
 	}
 
-	for i := int64(0); i < 100; i++ {
-		var index int64
+	for i := uint64(0); i < 100; i++ {
+		var index uint64
 		index, err = w.NextIndex()
 		switch {
 		case err != nil:
@@ -87,7 +87,7 @@ func TestWriter_AddRow(t *testing.T) {
 
 func ExampleWriter_GetIndex() {
 	var (
-		index int64
+		index uint64
 		err   error
 	)
 
@@ -108,7 +108,7 @@ func ExampleWriter_SetIndex() {
 
 func ExampleWriter_NextIndex() {
 	var (
-		index int64
+		index uint64
 		err   error
 	)
 
@@ -151,7 +151,7 @@ func testSetIndexGetIndex(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		var index int64
+		var index uint64
 		index, err = w.GetIndex()
 		switch {
 		case err != nil:

@@ -66,7 +66,7 @@ func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
 	}
 
 	if err = k.Transaction(func(w *Writer) (err error) {
-		var index int64
+		var index uint64
 		index, err = w.GetIndex()
 		switch {
 		case err != nil:
@@ -128,7 +128,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	}
 
 	if err = k.Transaction(func(w *Writer) (err error) {
-		var index int64
+		var index uint64
 		index, err = w.GetIndex()
 		switch {
 		case err != nil:

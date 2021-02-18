@@ -48,7 +48,7 @@ func ExampleKiroku_Transaction() {
 ```go
 func ExampleWriter_GetIndex() {
 	var (
-		index int64
+		index uint64
 		err   error
 	)
 
@@ -75,7 +75,7 @@ func ExampleWriter_SetIndex() {
 ```go
 func ExampleWriter_NextIndex() {
 	var (
-		index int64
+		index uint64
 		err   error
 	)
 

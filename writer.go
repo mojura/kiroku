@@ -65,7 +65,7 @@ type Writer struct {
 }
 
 // GetIndex will get the current index value
-func (w *Writer) GetIndex() (index int64, err error) {
+func (w *Writer) GetIndex() (index uint64, err error) {
 	w.mux.RLock()
 	defer w.mux.RUnlock()
 
@@ -80,7 +80,7 @@ func (w *Writer) GetIndex() (index int64, err error) {
 }
 
 // NextIndex will get the current index value then increment the internal value
-func (w *Writer) NextIndex() (index int64, err error) {
+func (w *Writer) NextIndex() (index uint64, err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 
@@ -98,7 +98,7 @@ func (w *Writer) NextIndex() (index int64, err error) {
 
 // SetIndex will set the index value
 // Note: This can be used to manually set an index to a desired value
-func (w *Writer) SetIndex(index int64) (err error) {
+func (w *Writer) SetIndex(index uint64) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 
