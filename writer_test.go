@@ -9,7 +9,7 @@ import (
 
 var testWriter *Writer
 
-func TestNewWriter(t *testing.T) {
+func Test_newWriter(t *testing.T) {
 	var err error
 	if err = os.Mkdir("./test_data", 0744); err != nil {
 		t.Fatal(err)
@@ -85,13 +85,6 @@ func TestWriter_AddRow(t *testing.T) {
 	}
 }
 
-func ExampleNewWriter() {
-	var err error
-	if testWriter, err = newWriter("./test_data", "test"); err != nil {
-		log.Fatal(err)
-		return
-	}
-}
 func ExampleWriter_GetIndex() {
 	var (
 		index int64
