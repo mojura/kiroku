@@ -3,6 +3,7 @@ package kiroku
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 )
 
@@ -68,8 +69,10 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
+	var wg sync.WaitGroup
+	wg.Add(2)
 	pfn := func(r *Reader) (err error) {
-		fmt.Println("Meta!", r.Meta())
+		wg.Done()
 		return
 	}
 
@@ -109,5 +112,6 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		return
 	}
 
+	wg.Wait()
 	k.Close()
 }
