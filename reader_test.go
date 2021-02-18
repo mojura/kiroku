@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"testing"
 
@@ -33,6 +34,35 @@ var readerTestcases = [4]readerTestcase{
 	},
 }
 
+var testReader *Reader
+
+func TestNewReader(t *testing.T) {
+	var (
+		c   *Writer
+		err error
+	)
+
+	tcs := readerTestcases
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	if c, err = newWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if err = populateReaderTestcase(c, tcs[:]); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = NewReader(c.f); err != nil {
+		t.Fatalf("error initializing reader: %v", err)
+		return
+	}
+}
 func TestReader_Meta(t *testing.T) {
 	var (
 		c   *Writer
@@ -234,6 +264,94 @@ func TestRead(t *testing.T) {
 		return testForEach(r, tcs[:])
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func ExampleNewReader() {
+	var (
+		f   *os.File
+		err error
+	)
+
+	if f, err = os.Open("filename.moj"); err != nil {
+		log.Fatalf("error opening: %v", err)
+		return
+	}
+
+	if testReader, err = NewReader(f); err != nil {
+		log.Fatalf("error initializing reader: %v", err)
+		return
+	}
+}
+
+func ExampleReader_Meta() {
+	var m Meta
+	m = testReader.Meta()
+	fmt.Println("Meta!", m)
+}
+
+func ExampleReader_ForEach() {
+	var err error
+	if err = testReader.ForEach(0, func(b *Block) (err error) {
+		fmt.Println("Block data:", string(b.Data))
+		return
+	}); err != nil {
+		log.Fatalf("Error iterating through blocks: %v", err)
+	}
+}
+
+func ExampleReader_Copy() {
+	var (
+		f   *os.File
+		err error
+	)
+
+	if f, err = os.Create("chunk.copy.moj"); err != nil {
+		log.Fatal(err)
+		return
+	}
+	defer f.Close()
+
+	if _, err = testReader.Copy(f); err != nil {
+		log.Fatalf("Error copying chunk: %v", err)
+	}
+}
+
+func ExampleReader_CopyBlocks() {
+	var (
+		f   *os.File
+		err error
+	)
+
+	if f, err = os.Create("chunk.blocksOnly.copy.moj"); err != nil {
+		log.Fatal(err)
+		return
+	}
+	defer f.Close()
+
+	if _, err = testReader.CopyBlocks(f); err != nil {
+		log.Fatalf("Error copying chunk: %v", err)
+	}
+}
+
+func ExampleRead() {
+	var err error
+	if err = Read("filename.moj", func(r *Reader) (err error) {
+		var m Meta
+		m = testReader.Meta()
+		fmt.Println("Meta!", m)
+
+		if err = r.ForEach(0, func(b *Block) (err error) {
+			fmt.Println("Block data:", string(b.Data))
+			return
+		}); err != nil {
+			log.Fatalf("Error iterating through blocks: %v", err)
+		}
+
+		return
+	}); err != nil {
+		log.Fatal(err)
+		return
 	}
 }
 
