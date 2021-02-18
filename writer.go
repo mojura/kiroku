@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 	"sync"
-	"unsafe"
 
 	"github.com/edsrzf/mmap-go"
 	"github.com/hatchify/errors"
@@ -202,7 +201,7 @@ func (w *Writer) mapMeta() (err error) {
 	}
 
 	// Associate Meta with memory mapped bytes
-	w.m = (*Meta)(unsafe.Pointer(&w.mm[0]))
+	w.m = newMetaFromBytes(w.mm)
 	return
 }
 
