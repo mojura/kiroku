@@ -109,7 +109,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	}
 	defer k.Close()
 
-	if err = testKiroku.Transaction(func(w *Writer) (err error) {
+	if err = k.Transaction(func(w *Writer) (err error) {
 		w.SetIndex(1337)
 		w.AddRow(TypeWriteAction, []byte("hello world!"))
 		return
