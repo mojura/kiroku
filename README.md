@@ -2,6 +2,71 @@
 Kiroku is a general purpose historical record system which utilizes data blocks. It was built to be used as the action persistence layer for Mojura.
 
 ## Usage
+### NewWriter
+```go
+func ExampleNewWriter() {
+	var err error
+	if testWriter, err = newWriter("./test_data", "test"); err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+```
+
+### Writer.GetIndex
+```go
+func ExampleWriter_GetIndex() {
+	var (
+		index int64
+		err   error
+	)
+
+	if index, err = testWriter.GetIndex(); err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	fmt.Println("Current index:", index)
+}
+```
+
+### Writer.SetIndex
+```go
+func ExampleWriter_SetIndex() {
+	var err error
+	if err = testWriter.SetIndex(1337); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+### Writer.NextIndex
+```go
+func ExampleWriter_NextIndex() {
+	var (
+		index int64
+		err   error
+	)
+
+	if index, err = testWriter.NextIndex(); err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	fmt.Println("Next index:", index)
+}
+```
+
+### Writer.AddRow
+```go
+func ExampleWriter_AddRow() {
+	var err error
+	if err = testWriter.AddRow(TypeWriteAction, []byte("Hello world!")); err != nil {
+		log.Fatalf("error adding row: %v", err)
+		return
+	}
+}
+```
 
 ### NewReader
 ```go

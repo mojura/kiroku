@@ -9,6 +9,20 @@ import (
 
 var testWriter *Writer
 
+func TestNewWriter(t *testing.T) {
+	var err error
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	if _, err = newWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+		return
+	}
+}
+
 func TestWriter_GetIndex(t *testing.T) {
 	testSetIndexGetIndex(t)
 }
@@ -71,6 +85,13 @@ func TestWriter_AddRow(t *testing.T) {
 	}
 }
 
+func ExampleNewWriter() {
+	var err error
+	if testWriter, err = newWriter("./test_data", "test"); err != nil {
+		log.Fatal(err)
+		return
+	}
+}
 func ExampleWriter_GetIndex() {
 	var (
 		index int64
