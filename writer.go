@@ -26,6 +26,9 @@ func newWriter(dir, name string) (wp *Writer, err error) {
 	defer w.closeIfError(err)
 
 	// Associate meta with memory map of meta bytes within the Chunk
+	// Note: We associate the Meta to an MMAP'd portion of the file for performance reasons.
+	// We are able to ensure and maintain safety due to the fact that we are controlling the
+	// file descriptor and will know when it's closed.
 	if err = w.mapMeta(); err != nil {
 		return
 	}
