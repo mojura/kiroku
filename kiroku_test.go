@@ -44,7 +44,12 @@ func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
 	}
 
 	if err = k.Transaction(func(w *Writer) (err error) {
-		if index := w.GetIndex(); index != 1337 {
+		var index int64
+		index, err = w.GetIndex()
+		switch {
+		case err != nil:
+			return
+		case index != 1337:
 			err = fmt.Errorf("invalid index, expected %d and received %d", 1337, index)
 			return
 		}
@@ -101,7 +106,12 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	}
 
 	if err = k.Transaction(func(w *Writer) (err error) {
-		if index := w.GetIndex(); index != 1337 {
+		var index int64
+		index, err = w.GetIndex()
+		switch {
+		case err != nil:
+			return
+		case index != 1337:
 			err = fmt.Errorf("invalid index, expected %d and received %d", 1337, index)
 			return
 		}

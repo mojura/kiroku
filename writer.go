@@ -58,21 +58,34 @@ type Writer struct {
 	m *Meta
 	// Location of file
 	filename string
+
+	closed bool
 }
 
 // GetIndex will get the current index value
-func (w *Writer) GetIndex() (index int64) {
+func (w *Writer) GetIndex() (index int64, err error) {
 	w.mux.RLock()
 	defer w.mux.RUnlock()
 
+	if w.closed {
+		err = errors.ErrIsClosed
+		return
+	}
+
 	// Return current index
-	return w.m.CurrentIndex
+	index = w.m.CurrentIndex
+	return
 }
 
 // NextIndex will get the current index value then increment the internal value
-func (w *Writer) NextIndex() (index int64) {
+func (w *Writer) NextIndex() (index int64, err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
+
+	if w.closed {
+		err = errors.ErrIsClosed
+		return
+	}
 
 	// Get current index
 	index = w.m.CurrentIndex
@@ -83,18 +96,27 @@ func (w *Writer) NextIndex() (index int64) {
 
 // SetIndex will set the index value
 // Note: This can be used to manually set an index to a desired value
-func (w *Writer) SetIndex(index int64) {
+func (w *Writer) SetIndex(index int64) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 
+	if w.closed {
+		return errors.ErrIsClosed
+	}
+
 	// Set current index as the provided index
 	w.m.CurrentIndex = index
+	return
 }
 
 // AddRow will add a row
 func (w *Writer) AddRow(t Type, data []byte) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
+
+	if w.closed {
+		return errors.ErrIsClosed
+	}
 
 	var b Block
 	b.Type = t
@@ -201,6 +223,15 @@ func (w *Writer) unmapMeta() (err error) {
 }
 
 func (w *Writer) close() (err error) {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+
+	if w.closed {
+		return errors.ErrIsClosed
+	}
+
+	w.closed = true
+
 	var errs errors.ErrorList
 	errs.Push(w.w.Close())
 	errs.Push(w.unmapMeta())
