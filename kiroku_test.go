@@ -2,10 +2,32 @@ package kiroku
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"testing"
 )
+
+var testKiroku *Kiroku
+
+func TestNew(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if k, err = New("test_data", "tester", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err = k.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
 	var (
@@ -87,7 +109,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	}
 	defer k.Close()
 
-	if err = k.Transaction(func(w *Writer) (err error) {
+	if err = testKiroku.Transaction(func(w *Writer) (err error) {
 		w.SetIndex(1337)
 		w.AddRow(TypeWriteAction, []byte("hello world!"))
 		return
@@ -124,4 +146,37 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 
 	wg.Wait()
 	k.Close()
+}
+
+func ExampleNew() {
+	var err error
+	if testKiroku, err = New("./test_data", "tester", nil); err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+
+func ExampleNew_with_custom_Processor() {
+	var err error
+	pfn := func(r *Reader) (err error) {
+		fmt.Println("Hello chunk!", r.Meta())
+		return
+	}
+
+	if testKiroku, err = New("./test_data", "tester", pfn); err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+
+func ExampleKiroku_Transaction() {
+	var err error
+	if err = testKiroku.Transaction(func(w *Writer) (err error) {
+		w.SetIndex(1337)
+		w.AddRow(TypeWriteAction, []byte("hello world!"))
+		return
+	}); err != nil {
+		log.Fatal(err)
+		return
+	}
 }

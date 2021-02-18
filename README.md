@@ -2,6 +2,48 @@
 Kiroku is a general purpose historical record system which utilizes data blocks. It was built to be used as the action persistence layer for Mojura.
 
 ## Usage
+### New
+```go
+func ExampleNew() {
+	var err error
+	if testKiroku, err = New("./test_data", "tester", nil); err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+```
+
+### New (with custom Processor)
+```go
+func ExampleNew_with_custom_Processor() {
+	var err error
+	pfn := func(r *Reader) (err error) {
+		fmt.Println("Hello chunk!", r.Meta())
+		return
+	}
+
+	if testKiroku, err = New("./test_data", "tester", pfn); err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+```
+
+### Kiroku.Transaction
+```go
+func ExampleKiroku_Transaction() {
+	var err error
+	if err = testKiroku.Transaction(func(w *Writer) (err error) {
+		w.SetIndex(1337)
+		w.AddRow(TypeWriteAction, []byte("hello world!"))
+		return
+	}); err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+```
+
 ### NewWriter
 ```go
 func ExampleNewWriter() {
