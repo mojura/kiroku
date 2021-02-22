@@ -111,8 +111,8 @@ func (w *Writer) SetIndex(index uint64) (err error) {
 	return
 }
 
-// AddRow will add a row
-func (w *Writer) AddRow(t Type, data []byte) (err error) {
+// AddBlock will add a row
+func (w *Writer) AddBlock(t Type, data []byte) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 

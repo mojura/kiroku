@@ -60,7 +60,7 @@ func TestWriter_NextIndex(t *testing.T) {
 	}
 }
 
-func TestWriter_AddRow(t *testing.T) {
+func TestWriter_AddBlock(t *testing.T) {
 	var (
 		w   *Writer
 		err error
@@ -79,7 +79,7 @@ func TestWriter_AddRow(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		if err = w.AddRow(tc.t, []byte(tc.data)); err != nil {
+		if err = w.AddBlock(tc.t, []byte(tc.data)); err != nil {
 			t.Fatalf("error adding row: %v", err)
 		}
 	}
@@ -120,9 +120,9 @@ func ExampleWriter_NextIndex() {
 	fmt.Println("Next index:", index)
 }
 
-func ExampleWriter_AddRow() {
+func ExampleWriter_AddBlock() {
 	var err error
-	if err = testWriter.AddRow(TypeWriteAction, []byte("Hello world!")); err != nil {
+	if err = testWriter.AddBlock(TypeWriteAction, []byte("Hello world!")); err != nil {
 		log.Fatalf("error adding row: %v", err)
 		return
 	}

@@ -35,7 +35,7 @@ func ExampleKiroku_Transaction() {
 	var err error
 	if err = testKiroku.Transaction(func(w *Writer) (err error) {
 		w.SetIndex(1337)
-		w.AddRow(TypeWriteAction, []byte("hello world!"))
+		w.AddBlock(TypeWriteAction, []byte("hello world!"))
 		return
 	}); err != nil {
 		log.Fatal(err)
@@ -88,11 +88,11 @@ func ExampleWriter_NextIndex() {
 }
 ```
 
-### Writer.AddRow
+### Writer.AddBlock
 ```go
-func ExampleWriter_AddRow() {
+func ExampleWriter_AddBlock() {
 	var err error
-	if err = testWriter.AddRow(TypeWriteAction, []byte("Hello world!")); err != nil {
+	if err = testWriter.AddBlock(TypeWriteAction, []byte("Hello world!")); err != nil {
 		log.Fatalf("error adding row: %v", err)
 		return
 	}

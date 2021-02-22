@@ -407,7 +407,7 @@ type readerTestcase struct {
 
 func populateReaderTestcase(w *Writer, tcs []readerTestcase) (err error) {
 	for i, tc := range tcs {
-		if err = w.AddRow(tc.t, []byte(tc.data)); err != nil {
+		if err = w.AddBlock(tc.t, []byte(tc.data)); err != nil {
 			err = fmt.Errorf("error adding row: %v", err)
 			return
 		}
