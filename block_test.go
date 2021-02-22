@@ -10,7 +10,8 @@ import (
 func TestBlock_MarshalEnkodo(t *testing.T) {
 	var b Block
 	b.Type = TypeComment
-	b.Data = []byte("this is a fun comment")
+	b.Key = []byte("testKey")
+	b.Value = []byte("this is a fun comment")
 
 	buf := bytes.NewBuffer(nil)
 
@@ -23,18 +24,21 @@ func TestBlock_MarshalEnkodo(t *testing.T) {
 func TestBlock_UnmarshalEnkodo(t *testing.T) {
 	tcs := []Block{
 		{
-			Type: TypeComment,
-			Data: []byte("this is a fun comment"),
+			Type:  TypeComment,
+			Value: []byte("this is a fun comment"),
 		},
 		{
-			Type: TypeWriteAction,
-			Data: []byte("Write #1"),
+			Type:  TypeWriteAction,
+			Key:   []byte("key1"),
+			Value: []byte("Write #1"),
 		},
 		{
-			Type: TypeWriteAction,
-			Data: []byte("Write #2"),
+			Type:  TypeWriteAction,
+			Key:   []byte("key2"),
+			Value: []byte("Write #2"),
 		},
 		{
+			Key:  []byte("key2"),
 			Type: TypeDeleteAction,
 		},
 	}
@@ -54,8 +58,10 @@ func TestBlock_UnmarshalEnkodo(t *testing.T) {
 		switch {
 		case decoded.Type != b.Type:
 			t.Fatalf("invalid type, expected %v and received %v", b.Type, decoded.Type)
-		case !bytes.Equal(decoded.Data, b.Data):
-			t.Fatalf("invalid type, expected %v and received %v", string(b.Data), string(decoded.Data))
+		case !bytes.Equal(decoded.Key, b.Key):
+			t.Fatalf("invalid key, expected %v and received %v", string(b.Key), string(decoded.Key))
+		case !bytes.Equal(decoded.Value, b.Value):
+			t.Fatalf("invalid value, expected %v and received %v", string(b.Value), string(decoded.Value))
 		}
 	}
 

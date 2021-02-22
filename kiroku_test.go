@@ -50,7 +50,7 @@ func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
 			return
 		}
 
-		return w.AddBlock(TypeWriteAction, []byte("hello world!"))
+		return w.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
 		return
@@ -116,7 +116,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 			return
 		}
 
-		return w.AddBlock(TypeWriteAction, []byte("hello world!"))
+		return w.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
 		return
@@ -180,7 +180,7 @@ func ExampleKiroku_Transaction() {
 			return
 		}
 
-		return w.AddBlock(TypeWriteAction, []byte("hello world!"))
+		return w.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		log.Fatal(err)
 		return

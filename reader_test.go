@@ -14,22 +14,26 @@ import (
 var readerTestcases = [4]readerTestcase{
 	{
 		t:     TypeWriteAction,
-		data:  "foo 1",
+		key:   "key1",
+		value: "foo 1",
 		index: 1,
 	},
 	{
 		t:     TypeWriteAction,
-		data:  "foo 2",
+		key:   "key2",
+		value: "foo 2",
 		index: 2,
 	},
 	{
 		t:     TypeWriteAction,
-		data:  "foo 3",
+		key:   "key3",
+		value: "foo 3",
 		index: 3,
 	},
 	{
 		t:     TypeDeleteAction,
-		data:  "",
+		key:   "key3",
+		value: "",
 		index: 3,
 	},
 }
@@ -214,8 +218,8 @@ func TestReader_CopyBlocks(t *testing.T) {
 		}
 
 		tc := tcs[count]
-		if str := string(b.Data); str != tc.data {
-			t.Fatalf("invalid data, expected <%s> and received <%s>", tc.data, str)
+		if str := string(b.Value); str != tc.value {
+			t.Fatalf("invalid data, expected <%s> and received <%s>", tc.value, str)
 		}
 
 		count++
@@ -292,7 +296,7 @@ func ExampleReader_Meta() {
 func ExampleReader_ForEach() {
 	var err error
 	if err = testReader.ForEach(0, func(b *Block) (err error) {
-		fmt.Println("Block data:", string(b.Data))
+		fmt.Println("Block value:", string(b.Value))
 		return
 	}); err != nil {
 		log.Fatalf("Error iterating through blocks: %v", err)
@@ -340,7 +344,7 @@ func ExampleRead() {
 		fmt.Println("Meta!", m)
 
 		if err = r.ForEach(0, func(b *Block) (err error) {
-			fmt.Println("Block data:", string(b.Data))
+			fmt.Println("Block value:", string(b.Value))
 			return
 		}); err != nil {
 			log.Fatalf("Error iterating through blocks: %v", err)
@@ -372,8 +376,8 @@ func testForEach(r *Reader, tcs []readerTestcase) (err error) {
 		var count int
 		if err = r.ForEach(lastBlockSize, func(b *Block) (err error) {
 			tc := tcs[count+i]
-			if str := string(b.Data); str != tc.data {
-				err = fmt.Errorf("invalid data, expected <%s> and received <%s>", tc.data, str)
+			if str := string(b.Value); str != tc.value {
+				err = fmt.Errorf("invalid data, expected <%s> and received <%s>", tc.value, str)
 				return
 			}
 
@@ -397,7 +401,8 @@ func testForEach(r *Reader, tcs []readerTestcase) (err error) {
 
 type readerTestcase struct {
 	t     Type
-	data  string
+	key   string
+	value string
 	index uint64
 
 	lastBlockSize int64
@@ -405,7 +410,7 @@ type readerTestcase struct {
 
 func populateReaderTestcase(w *Writer, tcs []readerTestcase) (err error) {
 	for i, tc := range tcs {
-		if err = w.AddBlock(tc.t, []byte(tc.data)); err != nil {
+		if err = w.AddBlock(tc.t, []byte(tc.key), []byte(tc.value)); err != nil {
 			err = fmt.Errorf("error adding row: %v", err)
 			return
 		}

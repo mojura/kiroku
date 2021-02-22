@@ -133,7 +133,7 @@ func ExampleReader_Meta() {
 func ExampleReader_ForEach() {
 	var err error
 	if err = testReader.ForEach(0, func(b *Block) (err error) {
-		fmt.Println("Block data:", string(b.Data))
+		fmt.Println("Block data:", string(b.Value))
 		return
 	}); err != nil {
 		log.Fatalf("Error iterating through blocks: %v", err)
@@ -191,7 +191,7 @@ func ExampleRead() {
 		fmt.Println("Meta!", m)
 
 		if err = r.ForEach(0, func(b *Block) (err error) {
-			fmt.Println("Block data:", string(b.Data))
+			fmt.Println("Block data:", string(b.Value))
 			return
 		}); err != nil {
 			log.Fatalf("Error iterating through blocks: %v", err)

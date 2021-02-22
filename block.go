@@ -8,8 +8,8 @@ type Block struct {
 	Type Type
 	// Key of block
 	Key []byte
-	// Data of block
-	Data []byte
+	// Value of block
+	Value []byte
 }
 
 // MarshalEnkodo is a enkodo encoding helper func
@@ -24,8 +24,8 @@ func (b *Block) MarshalEnkodo(enc *enkodo.Encoder) (err error) {
 		return
 	}
 
-	// Write data as bytes
-	if err = enc.Bytes(b.Data); err != nil {
+	// Write value as bytes
+	if err = enc.Bytes(b.Value); err != nil {
 		return
 	}
 
@@ -48,8 +48,8 @@ func (b *Block) UnmarshalEnkodo(dec *enkodo.Decoder) (err error) {
 		return
 	}
 
-	// Decode data as bytes
-	if err = dec.Bytes(&b.Data); err != nil {
+	// Decode value as bytes
+	if err = dec.Bytes(&b.Value); err != nil {
 		return
 	}
 

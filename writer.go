@@ -112,17 +112,22 @@ func (w *Writer) SetIndex(index uint64) (err error) {
 }
 
 // AddBlock will add a row
-func (w *Writer) AddBlock(t Type, data []byte) (err error) {
+func (w *Writer) AddBlock(t Type, key, value []byte) (err error) {
+	if err = t.Validate(); err != nil {
+		return
+	}
+
+	var b Block
+	b.Type = t
+	b.Key = key
+	b.Value = value
+
 	w.mux.Lock()
 	defer w.mux.Unlock()
 
 	if w.closed {
 		return errors.ErrIsClosed
 	}
-
-	var b Block
-	b.Type = t
-	b.Data = data
 
 	// Encode block to writer
 	if err = w.w.Encode(&b); err != nil {

@@ -79,7 +79,7 @@ func TestWriter_AddBlock(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		if err = w.AddBlock(tc.t, []byte(tc.data)); err != nil {
+		if err = w.AddBlock(tc.t, []byte(tc.key), []byte(tc.value)); err != nil {
 			t.Fatalf("error adding row: %v", err)
 		}
 	}
@@ -122,7 +122,7 @@ func ExampleWriter_NextIndex() {
 
 func ExampleWriter_AddBlock() {
 	var err error
-	if err = testWriter.AddBlock(TypeWriteAction, []byte("Hello world!")); err != nil {
+	if err = testWriter.AddBlock(TypeWriteAction, []byte("greeting"), []byte("Hello world!")); err != nil {
 		log.Fatalf("error adding row: %v", err)
 		return
 	}
