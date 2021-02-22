@@ -103,6 +103,21 @@ type Kiroku struct {
 	p Processor
 }
 
+// Meta will return a copy of the current Meta
+func (k *Kiroku) Meta() (m Meta, err error) {
+	k.mux.RLock()
+	defer k.mux.RUnlock()
+
+	// Check to see if Kiroku is closed
+	if k.isClosed() {
+		err = errors.ErrIsClosed
+		return
+	}
+
+	m = k.m
+	return
+}
+
 // Transaction will engage a new history transaction
 func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 	k.mux.Lock()

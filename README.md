@@ -29,6 +29,22 @@ func ExampleNew_with_custom_Processor() {
 }
 ```
 
+### Kiroku.Meta
+```go
+func ExampleKiroku_Meta() {
+	var (
+		m   Meta
+		err error
+	)
+
+	if m, err = testKiroku.Meta(); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Meta", m)
+}
+```
+
 ### Kiroku.Transaction
 ```go
 func ExampleKiroku_Transaction() {
