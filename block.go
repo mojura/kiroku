@@ -6,6 +6,8 @@ import "github.com/mojura/enkodo"
 type Block struct {
 	// Type of block
 	Type Type
+	// Key of block
+	Key []byte
 	// Data of block
 	Data []byte
 }
@@ -14,6 +16,11 @@ type Block struct {
 func (b *Block) MarshalEnkodo(enc *enkodo.Encoder) (err error) {
 	// Write type as uint8
 	if err = enc.Uint8(uint8(b.Type)); err != nil {
+		return
+	}
+
+	// Write key as bytes
+	if err = enc.Bytes(b.Key); err != nil {
 		return
 	}
 
@@ -35,6 +42,11 @@ func (b *Block) UnmarshalEnkodo(dec *enkodo.Decoder) (err error) {
 
 	// Convert uint8 value to Type
 	b.Type = Type(u8)
+
+	// Decode key as bytes
+	if err = dec.Bytes(&b.Key); err != nil {
+		return
+	}
 
 	// Decode data as bytes
 	if err = dec.Bytes(&b.Data); err != nil {
