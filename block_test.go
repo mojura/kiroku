@@ -54,7 +54,7 @@ func TestBlock_UnmarshalEnkodo(t *testing.T) {
 		switch {
 		case decoded.Type != b.Type:
 			t.Fatalf("invalid type, expected %v and received %v", b.Type, decoded.Type)
-		case bytes.Compare(decoded.Data, b.Data) != 0:
+		case !bytes.Equal(decoded.Data, b.Data):
 			t.Fatalf("invalid type, expected %v and received %v", string(b.Data), string(decoded.Data))
 		}
 	}

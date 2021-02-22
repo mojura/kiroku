@@ -285,8 +285,7 @@ func ExampleNewReader() {
 }
 
 func ExampleReader_Meta() {
-	var m Meta
-	m = testReader.Meta()
+	m := testReader.Meta()
 	fmt.Println("Meta!", m)
 }
 
@@ -337,8 +336,7 @@ func ExampleReader_CopyBlocks() {
 func ExampleRead() {
 	var err error
 	if err = Read("filename.moj", func(r *Reader) (err error) {
-		var m Meta
-		m = testReader.Meta()
+		m := testReader.Meta()
 		fmt.Println("Meta!", m)
 
 		if err = r.ForEach(0, func(b *Block) (err error) {
@@ -412,7 +410,10 @@ func populateReaderTestcase(w *Writer, tcs []readerTestcase) (err error) {
 			return
 		}
 
-		w.SetIndex(tc.index)
+		if err = w.SetIndex(tc.index); err != nil {
+			return
+		}
+
 		tcs[i].lastBlockSize = w.m.TotalBlockSize
 	}
 

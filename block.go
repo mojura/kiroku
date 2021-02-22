@@ -13,9 +13,15 @@ type Block struct {
 // MarshalEnkodo is a enkodo encoding helper func
 func (b *Block) MarshalEnkodo(enc *enkodo.Encoder) (err error) {
 	// Write type as uint8
-	enc.Uint8(uint8(b.Type))
+	if err = enc.Uint8(uint8(b.Type)); err != nil {
+		return
+	}
+
 	// Write data as bytes
-	enc.Bytes(b.Data)
+	if err = enc.Bytes(b.Data); err != nil {
+		return
+	}
+
 	return
 }
 

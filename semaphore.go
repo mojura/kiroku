@@ -13,8 +13,3 @@ func (s semaphore) send() {
 		// Semaphore is full, continue on
 	}
 }
-
-func (s semaphore) receive() {
-	// Wait for semaphore signal
-	<-s
-}
