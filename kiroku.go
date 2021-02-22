@@ -178,6 +178,20 @@ func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 	return
 }
 
+func (k *Kiroku) Filename() (filename string, err error) {
+	k.mux.RLock()
+	defer k.mux.RUnlock()
+
+	// Check to see if Kiroku is closed
+	if k.isClosed() {
+		err = errors.ErrIsClosed
+		return
+	}
+
+	filename = k.c.filename
+	return
+}
+
 // Close will close the selected instance of Kiroku
 func (k *Kiroku) Close() (err error) {
 	k.mux.Lock()
