@@ -35,6 +35,14 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor) (kp *Kir
 	k.dir = filepath.Clean(dir)
 	// Set name as the provided name
 	k.name = name
+	// Initialize cancel context with the provided context as the parent
+	k.ctx, k.cancelFn = context.WithCancel(ctx)
+	// Set processor
+	// Note: This field is optional and might be nil
+	k.p = p
+	// Initialize semaphores
+	k.ms = make(semaphore, 1)
+	k.ps = make(semaphore, 1)
 
 	// Initialize primary Chunk
 	if k.c, err = newWriter(dir, name); err != nil {
@@ -48,16 +56,15 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor) (kp *Kir
 		return
 	}
 
-	// Initialize cancel context with the provided context as the parent
-	k.ctx, k.cancelFn = context.WithCancel(ctx)
+	// Merge remaining chunks
+	if err = k.handleRemaining("chunk", k.merge); err != nil {
+		return
+	}
 
-	// Set processor
-	// Note: This field is optional and might be nil
-	k.p = p
-
-	// Initialize semaphores
-	k.ms = make(semaphore, 1)
-	k.ps = make(semaphore, 1)
+	// Process remaining merged chunks
+	if err = k.handleRemaining("merged", k.processAndRemove); err != nil {
+		return
+	}
 
 	// Increment jobs waiter
 	k.jobs.Add(2)
@@ -209,7 +216,11 @@ func (k *Kiroku) Close() (err error) {
 	k.jobs.Wait()
 
 	var errs errors.ErrorList
-	// Close primary chunks
+	// Merge remaining chunks
+	errs.Push(k.handleRemaining("chunk", k.merge))
+	// Process remaining merged chunks
+	errs.Push(k.handleRemaining("merged", k.processAndRemove))
+	// Close primary chunk
 	errs.Push(k.c.close())
 	return errs.Err()
 }
@@ -396,6 +407,32 @@ func (k *Kiroku) watch(targetPrefix string, s semaphore, fn func(filename string
 
 	// Decrement jobs waitgroup
 	k.jobs.Done()
+}
+
+func (k *Kiroku) handleRemaining(targetPrefix string, fn func(filename string) error) (err error) {
+	var (
+		filename string
+		ok       bool
+	)
+
+	for {
+		// Get next file for the target prefix
+		if filename, ok, err = k.getNext(targetPrefix); err != nil {
+			// TODO: Get teams input on if this value should be configurable
+			err = fmt.Errorf("error getting next file for prefix <%s>: %v", targetPrefix, err)
+			return
+		}
+
+		if !ok {
+			return
+		}
+
+		// Call provided function
+		if err = fn(filename); err != nil {
+			err = fmt.Errorf("error encountered during action for <%s>: <%v>", filename, err)
+			return
+		}
+	}
 }
 
 func (k *Kiroku) merge(filename string) (err error) {
