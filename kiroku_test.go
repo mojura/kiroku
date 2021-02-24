@@ -21,7 +21,7 @@ func TestNew(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil); err != nil {
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err = k.Close(); err != nil {
@@ -40,7 +40,7 @@ func TestKiroku_Meta(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil); err != nil {
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -78,7 +78,7 @@ func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil); err != nil {
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -100,7 +100,7 @@ func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
 	}
 	defer k.Close()
 
-	if k, err = New("test_data", "tester", nil); err != nil {
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -143,7 +143,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		return
 	}
 
-	if k, err = New("./test_data", "tester", pfn); err != nil {
+	if k, err = New("./test_data", "tester", pfn, nil); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -164,7 +164,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if k, err = New("test_data", "tester", pfn); err != nil {
+	if k, err = New("test_data", "tester", pfn, nil); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -192,7 +192,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 
 func ExampleNew() {
 	var err error
-	if testKiroku, err = New("./test_data", "tester", nil); err != nil {
+	if testKiroku, err = New("./test_data", "tester", nil, nil); err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -205,7 +205,7 @@ func ExampleNew_with_custom_Processor() {
 		return
 	}
 
-	if testKiroku, err = New("./test_data", "tester", pfn); err != nil {
+	if testKiroku, err = New("./test_data", "tester", pfn, nil); err != nil {
 		log.Fatal(err)
 		return
 	}

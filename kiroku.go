@@ -17,15 +17,15 @@ import (
 const errBreak = errors.Error("break")
 
 // New will initialize a new Kiroku instance
-// Note: Processor is optional
-func New(dir, name string, p Processor) (kp *Kiroku, err error) {
+// Note: Processor and Options are optional
+func New(dir, name string, p Processor, o *Options) (kp *Kiroku, err error) {
 	// Call NewWithContext with a background context
-	return NewWithContext(context.Background(), dir, name, p)
+	return NewWithContext(context.Background(), dir, name, p, o)
 }
 
 // NewWithContext will initialize a new Kiroku instance with a provided context.Context
-// Note: Processor is optional
-func NewWithContext(ctx context.Context, dir, name string, p Processor) (kp *Kiroku, err error) {
+// Note: Processor and Options are optional
+func NewWithContext(ctx context.Context, dir, name string, p Processor, o *Options) (kp *Kiroku, err error) {
 	var k Kiroku
 	// Set output prefix
 	prefix := fmt.Sprintf("Kiroku (%v)", name)
@@ -44,6 +44,12 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor) (kp *Kir
 	k.ms = make(semaphore, 1)
 	k.ps = make(semaphore, 1)
 
+	// Check to see if options were provided
+	if o != nil {
+		// Options were provided, set Kiroku options as the provided options value
+		k.opts = *o
+	}
+
 	// Initialize primary Chunk
 	if k.c, err = newWriter(dir, name); err != nil {
 		err = fmt.Errorf("error initializing primary chunk: %v", err)
@@ -56,14 +62,18 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor) (kp *Kir
 		return
 	}
 
-	// Merge remaining chunks
-	if err = k.handleRemaining("chunk", k.merge); err != nil {
-		return
+	if !k.opts.AvoidMergeOnInit {
+		// Options do not request avoiding merge on initialization, merge remaining chunks
+		if err = k.handleRemaining("chunk", k.merge); err != nil {
+			return
+		}
 	}
 
-	// Process remaining merged chunks
-	if err = k.handleRemaining("merged", k.processAndRemove); err != nil {
-		return
+	if !k.opts.AvoidProcessOnInit {
+		// Options do not request avoiding merge on initialization, process remaining merged chunks
+		if err = k.handleRemaining("merged", k.processAndRemove); err != nil {
+			return
+		}
 	}
 
 	// Increment jobs waiter
@@ -81,7 +91,21 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor) (kp *Kir
 type Kiroku struct {
 	mux sync.RWMutex
 
+	// Output logger
 	out *scribe.Scribe
+
+	// Kiroku options
+	opts Options
+	// Goroutine job waiter
+	jobs sync.WaitGroup
+
+	// Last meta
+	m Meta
+	// Merging semaphore
+	ms semaphore
+	// Processing semaphore
+	ps semaphore
+
 	// Primary chunk
 	c *Writer
 
@@ -90,24 +114,13 @@ type Kiroku struct {
 	// Context cancel func
 	cancelFn func()
 
-	// Last meta
-	m Meta
+	// Post processing func
+	p Processor
 
 	// Directory to store chunks
 	dir string
 	// Name of service
 	name string
-
-	// Merging semaphore
-	ms semaphore
-	// Processing semaphore
-	ps semaphore
-
-	// Goroutine job waiter
-	jobs sync.WaitGroup
-
-	// Post processing func
-	p Processor
 }
 
 // Meta will return a copy of the current Meta
@@ -216,10 +229,16 @@ func (k *Kiroku) Close() (err error) {
 	k.jobs.Wait()
 
 	var errs errors.ErrorList
-	// Merge remaining chunks
-	errs.Push(k.handleRemaining("chunk", k.merge))
-	// Process remaining merged chunks
-	errs.Push(k.handleRemaining("merged", k.processAndRemove))
+	if !k.opts.AvoidMergeOnClose {
+		// Options do not request avoiding merge on close, merge remaining chunks
+		errs.Push(k.handleRemaining("chunk", k.merge))
+	}
+
+	if !k.opts.AvoidProcessOnClose {
+		// Options do not request avoiding merge on close, process remaining merged chunks
+		errs.Push(k.handleRemaining("merged", k.processAndRemove))
+	}
+
 	// Close primary chunk
 	errs.Push(k.c.close())
 	return errs.Err()
