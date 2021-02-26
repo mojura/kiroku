@@ -30,6 +30,7 @@ func NewWriter(dir, name string) (wp *Writer, err error) {
 func NewWriterWithFile(f *os.File) (wp *Writer, err error) {
 	var w Writer
 	w.f = f
+	w.filename = f.Name()
 	// Whenever function ends, close the Writer if an error was encountered
 	defer w.closeIfError(err)
 
