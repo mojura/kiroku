@@ -13,15 +13,23 @@ import (
 
 // NewWriter will initialize a new Writer instance
 func NewWriter(dir, name string) (wp *Writer, err error) {
-	var w Writer
+	var f *os.File
 	// Set filename as a combination of the provided directory, name, and a .moj extension
-	w.filename = path.Join(dir, name+".moj")
+	filename := path.Join(dir, name+".moj")
 	// Open target file
 	// Note: This will create the file if it does not exist
-	if w.f, err = os.OpenFile(w.filename, os.O_CREATE|os.O_RDWR, 0744); err != nil {
-		err = fmt.Errorf("error opening file \"%s\": %v", w.filename, err)
+	if f, err = os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0744); err != nil {
+		err = fmt.Errorf("error opening file \"%s\": %v", filename, err)
 		return
 	}
+
+	return NewWriterWithFile(f)
+}
+
+// NewWriterWithFile will initialize a new Writer instance
+func NewWriterWithFile(f *os.File) (wp *Writer, err error) {
+	var w Writer
+	w.f = f
 	// Whenever function ends, close the Writer if an error was encountered
 	defer w.closeIfError(err)
 
@@ -33,8 +41,8 @@ func NewWriter(dir, name string) (wp *Writer, err error) {
 		return
 	}
 
-	// Move past meta
-	if _, err = w.f.Seek(metaSize, 0); err != nil {
+	// Move to the end of the file
+	if _, err = w.f.Seek(0, os.SEEK_END); err != nil {
 		return
 	}
 
@@ -141,14 +149,7 @@ func (w *Writer) AddBlock(t Type, key, value []byte) (err error) {
 	return
 }
 
-func (w *Writer) init(m *Meta, createdAt int64) {
-	// Populate meta info
-	w.m.merge(m)
-	// Set chunk createdAt time
-	w.m.CreatedAt = createdAt
-}
-
-func (w *Writer) merge(r *Reader) (err error) {
+func (w *Writer) Merge(r *Reader) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 
@@ -169,6 +170,23 @@ func (w *Writer) merge(r *Reader) (err error) {
 
 	// Merge new meta with existing meta
 	w.m.merge(&m)
+	return
+}
+
+func (w *Writer) init(m *Meta, createdAt int64) {
+	// Populate meta info
+	w.m.merge(m)
+	// Set chunk createdAt time
+	w.m.CreatedAt = createdAt
+}
+
+func (w *Writer) setLastSnapshotAt() (err error) {
+	if w.closed {
+		return errors.ErrIsClosed
+	}
+
+	// Set last snapshot at as the created at time for the chunk
+	w.m.LastSnapshotAt = w.m.CreatedAt
 	return
 }
 

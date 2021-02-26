@@ -139,7 +139,7 @@ func (k *Kiroku) Meta() (m Meta, err error) {
 }
 
 // Transaction will engage a new history transaction
-func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
+func (k *Kiroku) Transaction(fn func(*Transaction) error) (err error) {
 	k.mux.Lock()
 	defer k.mux.Unlock()
 
@@ -148,54 +148,35 @@ func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 		return errors.ErrIsClosed
 	}
 
-	// Get current timestamp
-	now := time.Now()
-	// Get Unix nano value from timestamp
-	unix := now.UnixNano()
-	// Set name of chunk with temporary prefix
-	name := fmt.Sprintf("%s.tmp.chunk.%d", k.name, unix)
+	txnFn := func(w *Writer) (err error) {
+		txn := newTransaction(w)
 
-	var c *Writer
-	// Initialize a new chunk Writer
-	if c, err = NewWriter(k.dir, name); err != nil {
-		return
+		// Call provided function
+		return fn(txn)
 	}
 
-	// Since this chunk was freshly created, initialize the chunk Writer
-	c.init(&k.m, unix)
+	return k.transaction(txnFn)
+}
 
-	// Call provided function
-	if err = fn(c); err != nil {
-		// Error encountered, delete chunk!
-		if deleteErr := k.deleteChunk(c); deleteErr != nil {
-			// Error encountered while deleting chunk, leave error log to notify server manager
-			k.out.Errorf("error deleting chunk <%s>: %v", name, deleteErr)
-		}
+// Snapshot will engage a new history snapshot
+func (k *Kiroku) Snapshot(fn func(*Snapshot) error) (err error) {
+	k.mux.Lock()
+	defer k.mux.Unlock()
 
-		// Return error from provided function
-		return
+	// Check to see if Kiroku is closed
+	if k.isClosed() {
+		return errors.ErrIsClosed
 	}
 
-	// Get Meta from transaction chunk
-	newMeta := *c.m
+	txnFn := func(w *Writer) (err error) {
+		w.setLastSnapshotAt()
+		ss := newSnapshot(w)
 
-	// Close transaction chunk
-	if err = c.close(); err != nil {
-		err = fmt.Errorf("error closing chunk: %v", err)
-		return
+		// Call provided function
+		return fn(ss)
 	}
 
-	// Rename to chunk with
-	if err = k.rename(c.filename, "chunk", unix); err != nil {
-		return
-	}
-
-	// Send signal to merge watcher
-	k.ms.send()
-
-	// Set underlying Meta as the transaction chunk's Meta
-	k.m = newMeta
-	return
+	return k.transaction(txnFn)
 }
 
 func (k *Kiroku) Filename() (filename string, err error) {
@@ -459,7 +440,7 @@ func (k *Kiroku) merge(filename string) (err error) {
 	unix := time.Now().UnixNano()
 
 	// Read file and merge into primary chunk
-	if err = Read(filename, k.c.merge); err != nil {
+	if err = Read(filename, k.c.Merge); err != nil {
 		err = fmt.Errorf("error encountered while merging: %v", err)
 		return
 	}
@@ -523,4 +504,55 @@ func (k *Kiroku) isClosed() bool {
 		// Context done channel is not closed, return false
 		return false
 	}
+}
+
+func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
+	// Get current timestamp
+	now := time.Now()
+	// Get Unix nano value from timestamp
+	unix := now.UnixNano()
+	// Set name of chunk with temporary prefix
+	name := fmt.Sprintf("%s.tmp.chunk.%d", k.name, unix)
+
+	var w *Writer
+	// Initialize a new chunk Writer
+	if w, err = NewWriter(k.dir, name); err != nil {
+		return
+	}
+
+	// Since this chunk was freshly created, initialize the chunk Writer
+	w.init(&k.m, unix)
+
+	// Call provided function
+	if err = fn(w); err != nil {
+		// Error encountered, delete chunk!
+		if deleteErr := k.deleteChunk(w); deleteErr != nil {
+			// Error encountered while deleting chunk, leave error log to notify server manager
+			k.out.Errorf("error deleting chunk <%s>: %v", name, deleteErr)
+		}
+
+		// Return error from provided function
+		return
+	}
+
+	// Get Meta from transaction chunk
+	newMeta := *w.m
+
+	// Close transaction chunk
+	if err = w.close(); err != nil {
+		err = fmt.Errorf("error closing chunk: %v", err)
+		return
+	}
+
+	// Rename to chunk with
+	if err = k.rename(w.filename, "chunk", unix); err != nil {
+		return
+	}
+
+	// Send signal to merge watcher
+	k.ms.send()
+
+	// Set underlying Meta as the transaction chunk's Meta
+	k.m = newMeta
+	return
 }
