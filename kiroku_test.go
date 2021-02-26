@@ -45,12 +45,12 @@ func TestKiroku_Meta(t *testing.T) {
 	}
 	defer k.Close()
 
-	if err = k.Transaction(func(w *Writer) (err error) {
-		if err = w.SetIndex(1337); err != nil {
+	if err = k.Transaction(func(t *Transaction) (err error) {
+		if err = t.SetIndex(1337); err != nil {
 			return
 		}
 
-		return w.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
+		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
 		return
@@ -83,12 +83,12 @@ func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
 	}
 	defer k.Close()
 
-	if err = k.Transaction(func(w *Writer) (err error) {
-		if err = w.SetIndex(1337); err != nil {
+	if err = k.Transaction(func(t *Transaction) (err error) {
+		if err = t.SetIndex(1337); err != nil {
 			return
 		}
 
-		return w.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
+		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
 		return
@@ -105,9 +105,9 @@ func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
 		return
 	}
 
-	if err = k.Transaction(func(w *Writer) (err error) {
+	if err = k.Transaction(func(t *Transaction) (err error) {
 		var index uint64
-		index, err = w.GetIndex()
+		index, err = t.GetIndex()
 		switch {
 		case err != nil:
 			return
@@ -149,12 +149,12 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	}
 	defer k.Close()
 
-	if err = k.Transaction(func(w *Writer) (err error) {
-		if err = w.SetIndex(1337); err != nil {
+	if err = k.Transaction(func(t *Transaction) (err error) {
+		if err = t.SetIndex(1337); err != nil {
 			return
 		}
 
-		return w.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
+		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
 		return
@@ -169,9 +169,9 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		return
 	}
 
-	if err = k.Transaction(func(w *Writer) (err error) {
+	if err = k.Transaction(func(t *Transaction) (err error) {
 		var index uint64
-		index, err = w.GetIndex()
+		index, err = t.GetIndex()
 		switch {
 		case err != nil:
 			return
@@ -226,12 +226,12 @@ func ExampleKiroku_Meta() {
 
 func ExampleKiroku_Transaction() {
 	var err error
-	if err = testKiroku.Transaction(func(w *Writer) (err error) {
-		if err = w.SetIndex(1337); err != nil {
+	if err = testKiroku.Transaction(func(t *Transaction) (err error) {
+		if err = t.SetIndex(1337); err != nil {
 			return
 		}
 
-		return w.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
+		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		log.Fatal(err)
 		return
