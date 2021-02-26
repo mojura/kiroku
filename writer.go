@@ -162,6 +162,18 @@ func (w *Writer) Merge(r *Reader) (err error) {
 		return
 	}
 
+	switch {
+	case m.CreatedAt <= w.m.CreatedAt:
+		// Meta is stale, return
+		return
+
+	case m.LastSnapshotAt > w.m.LastSnapshotAt:
+		// Truncate writer bytes to a zero block index
+		if err = w.f.Truncate(metaSize); err != nil {
+			return
+		}
+	}
+
 	// Copy remaining bytes to chunk
 	if _, err = r.CopyBlocks(w.f); err != nil {
 		err = fmt.Errorf("error encountered while copying source blocks: %v", err)
@@ -180,13 +192,15 @@ func (w *Writer) init(m *Meta, createdAt int64) {
 	w.m.CreatedAt = createdAt
 }
 
-func (w *Writer) setLastSnapshotAt() (err error) {
+func (w *Writer) initSnapshot() (err error) {
 	if w.closed {
 		return errors.ErrIsClosed
 	}
 
 	// Set last snapshot at as the created at time for the chunk
 	w.m.LastSnapshotAt = w.m.CreatedAt
+	// Reset block count to 0
+	w.m.BlockCount = 0
 	return
 }
 
