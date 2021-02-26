@@ -51,7 +51,7 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor, o *Optio
 	}
 
 	// Initialize primary Chunk
-	if k.c, err = newWriter(dir, name); err != nil {
+	if k.c, err = NewWriter(dir, name); err != nil {
 		err = fmt.Errorf("error initializing primary chunk: %v", err)
 		return
 	}
@@ -157,7 +157,7 @@ func (k *Kiroku) Transaction(fn func(*Writer) error) (err error) {
 
 	var c *Writer
 	// Initialize a new chunk Writer
-	if c, err = newWriter(k.dir, name); err != nil {
+	if c, err = NewWriter(k.dir, name); err != nil {
 		return
 	}
 

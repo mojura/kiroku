@@ -11,8 +11,8 @@ import (
 	"github.com/mojura/enkodo"
 )
 
-// newWriter will initialize a new Writer instance
-func newWriter(dir, name string) (wp *Writer, err error) {
+// NewWriter will initialize a new Writer instance
+func NewWriter(dir, name string) (wp *Writer, err error) {
 	var w Writer
 	// Set filename as a combination of the provided directory, name, and a .moj extension
 	w.filename = path.Join(dir, name+".moj")

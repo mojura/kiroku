@@ -9,7 +9,7 @@ import (
 
 var testWriter *Writer
 
-func Test_newWriter(t *testing.T) {
+func Test_NewWriter(t *testing.T) {
 	var err error
 	if err = os.Mkdir("./test_data", 0744); err != nil {
 		t.Fatal(err)
@@ -17,7 +17,7 @@ func Test_newWriter(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if _, err = newWriter("./test_data", "testie"); err != nil {
+	if _, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -43,7 +43,7 @@ func TestWriter_NextIndex(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if w, err = newWriter("./test_data", "testie"); err != nil {
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -73,7 +73,7 @@ func TestWriter_AddBlock(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if w, err = newWriter("./test_data", "testie"); err != nil {
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -82,6 +82,14 @@ func TestWriter_AddBlock(t *testing.T) {
 		if err = w.AddBlock(tc.t, []byte(tc.key), []byte(tc.value)); err != nil {
 			t.Fatalf("error adding row: %v", err)
 		}
+	}
+}
+
+func ExampleNewWriter() {
+	var err error
+	if testWriter, err = NewWriter("./test_data", "testie"); err != nil {
+		log.Fatal(err)
+		return
 	}
 }
 
@@ -141,7 +149,7 @@ func testSetIndexGetIndex(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if w, err = newWriter("./test_data", "testie"); err != nil {
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}

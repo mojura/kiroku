@@ -60,6 +60,17 @@ func ExampleKiroku_Transaction() {
 }
 ```
 
+### NewWriter
+```go
+func ExampleNewWriter() {
+	var err error
+	if testWriter, err = NewWriter("./test_data", "testie"); err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+```
+
 ### Writer.GetIndex
 ```go
 func ExampleWriter_GetIndex() {

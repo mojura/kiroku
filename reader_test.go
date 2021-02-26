@@ -53,7 +53,7 @@ func TestNewReader(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if c, err = newWriter("./test_data", "testie"); err != nil {
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -80,7 +80,7 @@ func TestReader_Meta(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if c, err = newWriter("./test_data", "testie"); err != nil {
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -113,7 +113,7 @@ func TestReader_ForEach(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if c, err = newWriter("./test_data", "testie"); err != nil {
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -145,7 +145,7 @@ func TestReader_Copy(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if c, err = newWriter("./test_data", "testie"); err != nil {
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -187,7 +187,7 @@ func TestReader_CopyBlocks(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if c, err = newWriter("./test_data", "testie"); err != nil {
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -251,7 +251,7 @@ func TestRead(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if c, err = newWriter("./test_data", "testie"); err != nil {
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 		return
 	}
