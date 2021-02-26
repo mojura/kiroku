@@ -50,7 +50,10 @@ func ExampleKiroku_Meta() {
 func ExampleKiroku_Transaction() {
 	var err error
 	if err = testKiroku.Transaction(func(t *Transaction) (err error) {
-		t.SetIndex(1337)
+		if err = t.SetIndex(1337); err != nil {
+			return
+		}
+
 		return t.AddBlock(TypeWriteAction, []byte("hello world!"))
 	}); err != nil {
 		log.Fatal(err)
