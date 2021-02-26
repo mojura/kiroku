@@ -6,6 +6,8 @@ import (
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/hatchify/errors"
 )
 
 var testKiroku *Kiroku
@@ -20,12 +22,86 @@ func TestNew(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./test_data")
-
 	if k, err = New("test_data", "tester", nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err = k.Close(); err != nil {
-		t.Fatal(err)
+	defer k.Close()
+}
+
+func TestNew_with_options(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	type testcase struct {
+		options *Options
+		err     error
+	}
+
+	tcs := []testcase{
+		{
+			options: nil,
+		},
+		{
+			options: &Options{
+				AvoidMergeOnInit:    false,
+				AvoidProcessOnInit:  false,
+				AvoidMergeOnClose:   false,
+				AvoidProcessOnClose: false,
+			},
+		},
+		{
+			options: &Options{
+				AvoidMergeOnInit:    true,
+				AvoidProcessOnInit:  false,
+				AvoidMergeOnClose:   false,
+				AvoidProcessOnClose: false,
+			},
+		},
+		{
+			options: &Options{
+				AvoidMergeOnInit:    true,
+				AvoidProcessOnInit:  true,
+				AvoidMergeOnClose:   false,
+				AvoidProcessOnClose: false,
+			},
+		},
+		{
+			options: &Options{
+				AvoidMergeOnInit:    true,
+				AvoidProcessOnInit:  true,
+				AvoidMergeOnClose:   true,
+				AvoidProcessOnClose: false,
+			},
+		},
+		{
+			options: &Options{
+				AvoidMergeOnInit:    true,
+				AvoidProcessOnInit:  true,
+				AvoidMergeOnClose:   true,
+				AvoidProcessOnClose: true,
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		if err = os.Mkdir("test_data", 0744); err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll("./test_data")
+
+		if k, err = New("test_data", "tester", nil, tc.options); err != tc.err {
+			t.Fatalf("invalid error, expected <%v> and received <%v>", tc.err, err)
+		}
+
+		if err != nil {
+			continue
+		}
+
+		if err = k.Close(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -64,6 +140,40 @@ func TestKiroku_Meta(t *testing.T) {
 	case m.CurrentIndex != 1337:
 		t.Fatalf("invalid index, expected %d and received %d", 1337, m.CurrentIndex)
 		return
+	}
+}
+
+func TestKiroku_Meta_on_closed(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	defer k.Close()
+
+	if err = k.Transaction(func(t *Transaction) (err error) {
+		if err = t.SetIndex(1337); err != nil {
+			return
+		}
+
+		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
+	}); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	k.Close()
+
+	if _, err = k.Meta(); err != errors.ErrIsClosed {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
 	}
 }
 
