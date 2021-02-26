@@ -298,3 +298,13 @@ func ExampleKiroku_Transaction() {
 		return
 	}
 }
+
+func ExampleKiroku_Snapshot() {
+	var err error
+	if err = testKiroku.Snapshot(func(s *Snapshot) (err error) {
+		return s.Write([]byte("testKey"), []byte("hello world!"))
+	}); err != nil {
+		log.Fatal(err)
+		return
+	}
+}

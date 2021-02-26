@@ -49,10 +49,22 @@ func ExampleKiroku_Meta() {
 ```go
 func ExampleKiroku_Transaction() {
 	var err error
-	if err = testKiroku.Transaction(func(w *Writer) (err error) {
-		w.SetIndex(1337)
-		w.AddBlock(TypeWriteAction, []byte("hello world!"))
+	if err = testKiroku.Transaction(func(t *Transaction) (err error) {
+		t.SetIndex(1337)
+		return t.AddBlock(TypeWriteAction, []byte("hello world!"))
+	}); err != nil {
+		log.Fatal(err)
 		return
+	}
+}
+```
+
+### Kiroku.Snapshot
+```go
+func ExampleKiroku_Snapshot() {
+	var err error
+	if err = testKiroku.Snapshot(func(s *Snapshot) (err error) {
+		return s.Write([]byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		log.Fatal(err)
 		return
