@@ -1,9 +1,14 @@
 package kiroku
 
-func newSnapshot(w *Writer) *Snapshot {
+func newSnapshot(w *Writer) (sp *Snapshot, err error) {
+	if err = w.initSnapshot(); err != nil {
+		return
+	}
+
 	var s Snapshot
 	s.w = w
-	return &s
+	sp = &s
+	return
 }
 
 // Snapshot manages a Kiroku transaction
