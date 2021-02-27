@@ -35,6 +35,7 @@ func (b *Block) MarshalEnkodo(enc *enkodo.Encoder) (err error) {
 // UnmarshalEnkodo is a enkodo decoding helper func
 func (b *Block) UnmarshalEnkodo(dec *enkodo.Decoder) (err error) {
 	var u8 uint8
+
 	// Decode uint8 value
 	if u8, err = dec.Uint8(); err != nil {
 		return

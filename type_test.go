@@ -49,6 +49,10 @@ func TestType_String(t *testing.T) {
 
 	tcs := []testcase{
 		{
+			t:   TypeUnset,
+			str: "unset",
+		},
+		{
 			t:   TypeWriteAction,
 			str: "write",
 		},

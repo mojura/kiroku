@@ -85,23 +85,75 @@ func TestNew_with_options(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tcs {
+	fn := func(tc testcase) (err error) {
 		if err = os.Mkdir("test_data", 0744); err != nil {
-			t.Fatal(err)
+			return
 		}
 		defer os.RemoveAll("./test_data")
 
 		if k, err = New("test_data", "tester", nil, tc.options); err != tc.err {
-			t.Fatalf("invalid error, expected <%v> and received <%v>", tc.err, err)
+			return fmt.Errorf("invalid error, expected <%v> and received <%v>", tc.err, err)
 		}
 
 		if err != nil {
-			continue
+			return
 		}
 
-		if err = k.Close(); err != nil {
+		return k.Close()
+	}
+
+	for _, tc := range tcs {
+		if err = fn(tc); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestKiroku_Filename(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	defer k.Close()
+
+	var filename string
+	if filename, err = k.Filename(); err != nil {
+		t.Fatal(err)
+	}
+
+	if filename != "test_data/tester.moj" {
+		t.Fatalf("invalid filename, expected <%s and received <%s>", "test_data/tester.moj", filename)
+	}
+}
+
+func TestKiroku_Filename_on_closed(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = k.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = k.Filename(); err != errors.ErrIsClosed {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
 	}
 }
 
@@ -300,6 +352,37 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	k.Close()
 }
 
+func TestKiroku_Transaction_on_closed(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = k.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = k.Transaction(func(t *Transaction) (err error) {
+		if err = t.SetIndex(1337); err != nil {
+			return
+		}
+
+		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
+	}); err != errors.ErrIsClosed {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
+		return
+	}
+}
+
 func TestKiroku_Snapshot(t *testing.T) {
 	var (
 		k   *Kiroku
@@ -340,11 +423,7 @@ func TestKiroku_Snapshot(t *testing.T) {
 	}
 
 	if err = k.Snapshot(func(s *Snapshot) (err error) {
-		if err = s.Write([]byte("1"), []byte("hello world!")); err != nil {
-			return
-		}
-
-		return
+		return s.Write([]byte("1"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
 		return
@@ -358,6 +437,58 @@ func TestKiroku_Snapshot(t *testing.T) {
 	switch {
 	case m.BlockCount != 1:
 		t.Fatalf("invalid block count, expected %d and received %d", 1, m.BlockCount)
+	}
+}
+
+func TestKiroku_Snapshot_on_closed(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = k.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = k.Snapshot(func(s *Snapshot) (err error) {
+		return s.Write([]byte("1"), []byte("hello world!"))
+	}); err != errors.ErrIsClosed {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
+		return
+	}
+}
+
+func TestKiroku_Snapshot_with_error(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if k, err = New("test_data", "tester", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	defer k.Close()
+
+	targetErr := errors.Error("foobar")
+	if err = k.Snapshot(func(s *Snapshot) (err error) {
+		return targetErr
+	}); err != targetErr {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", targetErr, err)
+		return
 	}
 }
 

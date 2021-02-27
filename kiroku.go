@@ -169,11 +169,8 @@ func (k *Kiroku) Snapshot(fn func(*Snapshot) error) (err error) {
 	}
 
 	txnFn := func(w *Writer) (err error) {
-		var ss *Snapshot
-		if ss, err = newSnapshot(w); err != nil {
-			return
-		}
-
+		// Initialize snapshot
+		ss := newSnapshot(w)
 		// Call provided function
 		return fn(ss)
 	}

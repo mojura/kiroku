@@ -193,16 +193,11 @@ func (w *Writer) init(m *Meta, createdAt int64) {
 	w.m.CreatedAt = createdAt
 }
 
-func (w *Writer) initSnapshot() (err error) {
-	if w.closed {
-		return errors.ErrIsClosed
-	}
-
+func (w *Writer) initSnapshot() {
 	// Set last snapshot at as the created at time for the chunk
 	w.m.LastSnapshotAt = w.m.CreatedAt
 	// Reset block count to 0
 	w.m.BlockCount = 0
-	return
 }
 
 func (w *Writer) setSize() (err error) {
