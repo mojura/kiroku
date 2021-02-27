@@ -2,7 +2,6 @@ package kiroku
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -144,7 +143,6 @@ func TestBlock_UnmarshalEnkodo_with_errors(t *testing.T) {
 
 	for i, tc := range tcs {
 		err := enkodo.NewReader(&tc).Decode(&b)
-		fmt.Println("Hmm", err, tc.err)
 		switch {
 		case tc.err == nil && err == nil:
 		case tc.err == err:
@@ -185,7 +183,6 @@ type countReader struct {
 }
 
 func (r *countReader) Read(bs []byte) (n int, err error) {
-	fmt.Println("READ", r.n)
 	if r.n++; r.n >= r.count {
 		err = r.err
 		return
@@ -196,7 +193,6 @@ func (r *countReader) Read(bs []byte) (n int, err error) {
 }
 
 func (r *countReader) ReadByte() (b byte, err error) {
-	fmt.Println("READ", r.n)
 	if r.n++; r.n >= r.count {
 		err = r.err
 		return

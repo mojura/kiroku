@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"testing"
+
+	"github.com/hatchify/errors"
 )
 
 var testWriter *Writer
@@ -27,8 +29,56 @@ func TestWriter_GetIndex(t *testing.T) {
 	testSetIndexGetIndex(t)
 }
 
+func TestWriter_GetIndex_on_closed(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = w.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = w.GetIndex(); err != errors.ErrIsClosed {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
+	}
+}
+
 func TestWriter_SetIndex(t *testing.T) {
 	testSetIndexGetIndex(t)
+}
+
+func TestWriter_SetIndex_on_closed(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = w.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = w.SetIndex(1337); err != errors.ErrIsClosed {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
+	}
 }
 
 func TestWriter_NextIndex(t *testing.T) {
@@ -60,6 +110,30 @@ func TestWriter_NextIndex(t *testing.T) {
 	}
 }
 
+func TestWriter_NextIndex_on_closed(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = w.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = w.NextIndex(); err != errors.ErrIsClosed {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
+	}
+}
+
 func TestWriter_AddBlock(t *testing.T) {
 	var (
 		w   *Writer
@@ -82,6 +156,30 @@ func TestWriter_AddBlock(t *testing.T) {
 		if err = w.AddBlock(tc.t, []byte(tc.key), []byte(tc.value)); err != nil {
 			t.Fatalf("error adding row: %v", err)
 		}
+	}
+}
+
+func TestWriter_AddBlock_on_closed(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = w.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = w.AddBlock(TypeWriteAction, []byte("foo"), []byte("bar")); err != errors.ErrIsClosed {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
 	}
 }
 
