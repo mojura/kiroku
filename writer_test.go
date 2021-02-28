@@ -19,9 +19,75 @@ func Test_NewWriter(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if _, err = NewWriter("./test_data", "testie"); err != nil {
+	type testcase struct {
+		dir  string
+		name string
+
+		expectedError error
+	}
+
+	tcs := []testcase{
+		{
+			dir:           "./test_data",
+			name:          "testie",
+			expectedError: nil,
+		},
+		{
+			dir:           "./foobar_no_dir",
+			name:          "testie",
+			expectedError: fmt.Errorf(`error opening file "foobar_no_dir/testie.moj": open foobar_no_dir/testie.moj: no such file or directory`),
+		},
+	}
+
+	for _, tc := range tcs {
+		_, err = NewWriter(tc.dir, tc.name)
+		if err = compareErrors(tc.expectedError, err); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func Test_NewWriterWithFile(t *testing.T) {
+	var err error
+	if err = os.Mkdir("./test_data", 0744); err != nil {
 		t.Fatal(err)
 		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	var rdOnlyFile *os.File
+	if rdOnlyFile, err = os.OpenFile("rdOnly_testfile.txt", os.O_CREATE|os.O_RDONLY, 0744); err != nil {
+		t.Fatal(err)
+	}
+
+	var appendOnlyFile *os.File
+	if appendOnlyFile, err = os.OpenFile("appendOnly_testfile.txt", os.O_CREATE|os.O_APPEND, 0744); err != nil {
+		t.Fatal(err)
+	}
+
+	type testcase struct {
+		f *os.File
+
+		expectedError error
+	}
+
+	truncateErrLayout := "error mapping Meta: error setting file size to %d: truncate %s: %v"
+	tcs := []testcase{
+		{
+			f:             rdOnlyFile,
+			expectedError: fmt.Errorf(truncateErrLayout, metaSize, "rdOnly_testfile.txt", os.ErrInvalid),
+		},
+		{
+			f:             appendOnlyFile,
+			expectedError: fmt.Errorf(truncateErrLayout, metaSize, "appendOnly_testfile.txt", os.ErrInvalid),
+		},
+	}
+
+	for i, tc := range tcs {
+		_, err = NewWriterWithFile(tc.f)
+		if err = compareErrors(tc.expectedError, err); err != nil {
+			t.Fatalf("%v (test case #%d)", err, i)
+		}
 	}
 }
 
@@ -183,6 +249,62 @@ func TestWriter_AddBlock_on_closed(t *testing.T) {
 	}
 }
 
+func TestWriter_setSize_on_uninitialized(t *testing.T) {
+	var err error
+	w := &Writer{}
+	expectedError := fmt.Errorf("error getting file information: %v", os.ErrInvalid)
+	if err = compareErrors(expectedError, w.setSize()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWriter_setSize_with_read_only_file(t *testing.T) {
+	var err error
+	w := &Writer{}
+	if w.f, err = os.OpenFile("testfile.txt", os.O_CREATE|os.O_RDONLY, 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("testfile.txt")
+
+	expectedError := fmt.Errorf("error setting file size to %d: truncate %s: %v", metaSize, "testfile.txt", os.ErrInvalid)
+	if err = compareErrors(expectedError, w.setSize()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWriter_unmapMeta_already_unmapped(t *testing.T) {
+	var err error
+	w := &Writer{}
+
+	if err = w.unmapMeta(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWriter_close_already_closed(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = compareErrors(nil, w.close()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = compareErrors(errors.ErrIsClosed, w.close()); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func ExampleNewWriter() {
 	var err error
 	if testWriter, err = NewWriter("./test_data", "testie"); err != nil {
@@ -265,5 +387,24 @@ func testSetIndexGetIndex(t *testing.T) {
 		case index != tc.index:
 			t.Fatalf("invalid index, expected %d and received %d", tc.index, index)
 		}
+	}
+}
+
+func compareErrors(expected, received error) (err error) {
+	aStr := errToString(expected)
+	bStr := errToString(received)
+	if aStr == bStr {
+		return
+	}
+
+	return fmt.Errorf("invalid error, expected <%s> and received <%s>", aStr, bStr)
+}
+
+func errToString(err error) (out string) {
+	switch err {
+	case nil:
+		return "nil"
+	default:
+		return err.Error()
 	}
 }

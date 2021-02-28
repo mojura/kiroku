@@ -32,13 +32,14 @@ func NewWriterWithFile(f *os.File) (wp *Writer, err error) {
 	w.f = f
 	w.filename = f.Name()
 	// Whenever function ends, close the Writer if an error was encountered
-	defer w.closeIfError(err)
+	defer func() { w.closeIfError(err) }()
 
 	// Associate meta with memory map of meta bytes within the Chunk
 	// Note: We associate the Meta to an MMAP'd portion of the file for performance reasons.
 	// We are able to ensure and maintain safety due to the fact that we are controlling the
 	// file descriptor and will know when it's closed.
 	if err = w.mapMeta(); err != nil {
+		err = fmt.Errorf("error mapping Meta: %v", err)
 		return
 	}
 
@@ -226,7 +227,6 @@ func (w *Writer) setSize() (err error) {
 func (w *Writer) mapMeta() (err error) {
 	// Ensure underlying file is big enough for Meta bytes
 	if err = w.setSize(); err != nil {
-		err = fmt.Errorf("error setting size: %v", err)
 		return
 	}
 
@@ -268,9 +268,16 @@ func (w *Writer) close() (err error) {
 	w.closed = true
 
 	var errs errors.ErrorList
-	errs.Push(w.w.Close())
+	if w.w != nil {
+		errs.Push(w.w.Close())
+	}
+
 	errs.Push(w.unmapMeta())
-	errs.Push(w.f.Close())
+
+	if w.f != nil {
+		errs.Push(w.f.Close())
+	}
+
 	return errs.Err()
 }
 
