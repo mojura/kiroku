@@ -14,7 +14,7 @@ func newMetaFromBytes(bs []byte) *Meta {
 }
 
 func newMetaFromReader(r io.ReadSeeker) (m Meta, err error) {
-	// Seek to the beginning of the file
+	// Seek to the beginning of the files
 	if _, err = r.Seek(0, 0); err != nil {
 		err = fmt.Errorf("error encountered while seeking to beginning of file: %v", err)
 		return

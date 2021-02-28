@@ -256,6 +256,36 @@ func TestWriter_AddBlock_on_closed(t *testing.T) {
 	}
 }
 
+func TestWriter_AddBlock_with_invalid_type(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+	}
+	defer w.close()
+
+	// Close file to incur error
+	w.f.Close()
+
+	// Set expected error as an invalid type error
+	expectedErr := fmt.Errorf("invalid type, <%d> is not supported", 126)
+
+	// Attempt to add block with invalid type
+	err = w.AddBlock(126, []byte("foo"), []byte("bar"))
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestWriter_AddBlock_with_closed_file(t *testing.T) {
 	var (
 		w   *Writer
@@ -281,7 +311,6 @@ func TestWriter_AddBlock_with_closed_file(t *testing.T) {
 	if err = compareErrors(expectedErr, err); err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func TestWriter_Merge(t *testing.T) {

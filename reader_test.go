@@ -67,6 +67,71 @@ func TestNewReader(t *testing.T) {
 		return
 	}
 }
+
+func TestNewReader_with_closed_file(t *testing.T) {
+	var (
+		f   *os.File
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	if f, err = os.OpenFile("./test_data/test", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0744); err != nil {
+		t.Fatal(err)
+	}
+
+	// Close file to trigger error
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set expected error as a seek error due to the file being closed
+	expectedErr := fmt.Errorf("error encountered while seeking to beginning of file: seek %s: file already closed", "./test_data/test")
+
+	// Attempt to initialize Reader
+	_, err = NewReader(f)
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNewReader_with_append_only_file(t *testing.T) {
+	var (
+		f   *os.File
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	if f, err = os.OpenFile("./test_data/test", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0744); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write contents to file to force seek
+	if _, err = f.WriteString("test"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set expected error as an io.EOF bubbling out to reader initialization
+	expectedErr := fmt.Errorf("error reading meta bytes: %v", io.ErrUnexpectedEOF)
+
+	// Attempt to initialize Reader
+	_, err = NewReader(f)
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestReader_Meta(t *testing.T) {
 	var (
 		c   *Writer
@@ -92,7 +157,6 @@ func TestReader_Meta(t *testing.T) {
 	var r *Reader
 	if r, err = NewReader(c.f); err != nil {
 		t.Fatalf("error initializing reader: %v", err)
-		return
 	}
 
 	if err = testMeta(r, tcs[:]); err != nil {
@@ -267,6 +331,51 @@ func TestRead(t *testing.T) {
 
 		return testForEach(r, tcs[:])
 	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRead_invalid_file(t *testing.T) {
+	var err error
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	expectedErr := fmt.Errorf("open ./test_data/testie: no such file or directory")
+	err = Read("./test_data/testie", func(r *Reader) (err error) {
+		return
+	})
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRead_non_readable_file(t *testing.T) {
+	var err error
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	var f *os.File
+	if f, err = os.OpenFile("./test_data/test", os.O_CREATE|os.O_RDWR, 0511); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedErr := fmt.Errorf("error reading meta bytes: %v", io.EOF)
+	err = Read("./test_data/test", func(r *Reader) (err error) {
+		return
+	})
+
+	if err = compareErrors(expectedErr, err); err != nil {
 		t.Fatal(err)
 	}
 }
