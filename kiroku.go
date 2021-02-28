@@ -178,6 +178,7 @@ func (k *Kiroku) Snapshot(fn func(*Snapshot) error) (err error) {
 	return k.transaction(txnFn)
 }
 
+// Filename returns the filename of the primary chunk
 func (k *Kiroku) Filename() (filename string, err error) {
 	k.mux.RLock()
 	defer k.mux.RUnlock()

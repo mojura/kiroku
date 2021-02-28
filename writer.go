@@ -150,6 +150,7 @@ func (w *Writer) AddBlock(t Type, key, value []byte) (err error) {
 	return
 }
 
+// Merge will merge a child chunk into a primary chunk
 func (w *Writer) Merge(r *Reader) (err error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
