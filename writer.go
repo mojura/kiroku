@@ -168,6 +168,8 @@ func (w *Writer) Merge(r *Reader) (err error) {
 		if err = w.f.Truncate(metaSize); err != nil {
 			return
 		}
+
+		w.m.TotalBlockSize = 0
 	}
 
 	// Copy remaining bytes to chunk

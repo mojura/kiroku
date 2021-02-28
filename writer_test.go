@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hatchify/errors"
 )
@@ -56,12 +57,12 @@ func Test_NewWriterWithFile(t *testing.T) {
 	defer os.RemoveAll("./test_data")
 
 	var rdOnlyFile *os.File
-	if rdOnlyFile, err = os.OpenFile("rdOnly_testfile.txt", os.O_CREATE|os.O_RDONLY, 0744); err != nil {
+	if rdOnlyFile, err = os.OpenFile("./test_data/rdOnly_testfile.txt", os.O_CREATE|os.O_RDONLY, 0744); err != nil {
 		t.Fatal(err)
 	}
 
 	var appendOnlyFile *os.File
-	if appendOnlyFile, err = os.OpenFile("appendOnly_testfile.txt", os.O_CREATE|os.O_APPEND, 0744); err != nil {
+	if appendOnlyFile, err = os.OpenFile("./test_data/appendOnly_testfile.txt", os.O_CREATE|os.O_APPEND, 0744); err != nil {
 		t.Fatal(err)
 	}
 
@@ -71,7 +72,7 @@ func Test_NewWriterWithFile(t *testing.T) {
 		expectedError error
 	}
 
-	truncateErrLayout := "error mapping Meta: error setting file size to %d: truncate %s: %v"
+	truncateErrLayout := "error mapping Meta: error setting file size to %d: truncate ./test_data/%s: %v"
 	tcs := []testcase{
 		{
 			f:             rdOnlyFile,
@@ -82,6 +83,12 @@ func Test_NewWriterWithFile(t *testing.T) {
 			expectedError: fmt.Errorf(truncateErrLayout, metaSize, "appendOnly_testfile.txt", os.ErrInvalid),
 		},
 	}
+
+	/*
+
+		<error mapping Meta: error setting file size to 40: truncate rdOnly_testfile.txt: invalid argument>
+		<error mapping Meta: error setting file size to 40: truncate ./test_data/rdOnly_testfile.txt: invalid argument> (test case #0)
+	*/
 
 	for i, tc := range tcs {
 		_, err = NewWriterWithFile(tc.f)
@@ -246,6 +253,375 @@ func TestWriter_AddBlock_on_closed(t *testing.T) {
 
 	if err = w.AddBlock(TypeWriteAction, []byte("foo"), []byte("bar")); err != errors.ErrIsClosed {
 		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
+	}
+}
+
+func TestWriter_AddBlock_with_closed_file(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+	}
+	defer w.close()
+
+	// Close file to incur error
+	w.f.Close()
+
+	expectedErr := fmt.Errorf("write %s: file already closed", w.filename)
+	err = w.AddBlock(TypeWriteAction, []byte("foo"), []byte("bar"))
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+
+}
+
+func TestWriter_Merge(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "primary"); err != nil {
+		t.Fatal(err)
+	}
+	defer w.close()
+
+	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	var chunk *Writer
+	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
+		t.Fatal(err)
+	}
+	defer chunk.close()
+
+	// Initialize chunk
+	chunk.init(w.m, time.Now().UnixNano())
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("1"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("2"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.SetIndex(2); err != nil {
+		t.Fatal(err)
+	}
+
+	chunkFilename := chunk.filename
+	chunkSize := chunk.m.TotalBlockSize
+
+	if err = chunk.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	beforeSize := w.m.TotalBlockSize
+	expectedTotal := chunkSize + beforeSize
+
+	if err = Read(chunkFilename, func(r *Reader) (err error) {
+		return w.Merge(r)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	switch {
+	case w.m.CurrentIndex != 2:
+		t.Fatalf("invalid index, expected %d and received %d", 2, w.m.CurrentIndex)
+	case w.m.TotalBlockSize != expectedTotal:
+		t.Fatalf("invalid total block size, expected %d bytes and received %d", expectedTotal, w.m.TotalBlockSize)
+	}
+}
+
+func TestWriter_Merge_stale(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "primary"); err != nil {
+		t.Fatal(err)
+	}
+	defer w.close()
+
+	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	var chunk *Writer
+	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
+		t.Fatal(err)
+	}
+	defer chunk.close()
+
+	// Initialize chunk
+	chunk.init(w.m, time.Now().UnixNano())
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("1"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("2"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.SetIndex(2); err != nil {
+		t.Fatal(err)
+	}
+
+	chunkFilename := chunk.filename
+	chunkSize := chunk.m.TotalBlockSize
+
+	if err = chunk.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	beforeSize := w.m.TotalBlockSize
+	expectedTotal := chunkSize + beforeSize
+
+	if err = Read(chunkFilename, func(r *Reader) (err error) {
+		if err = w.Merge(r); err != nil {
+			return
+		}
+
+		// Stale merge, this should ignore
+		return w.Merge(r)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	switch {
+	case w.m.CurrentIndex != 2:
+		t.Fatalf("invalid index, expected %d and received %d", 2, w.m.CurrentIndex)
+	case w.m.TotalBlockSize != expectedTotal:
+		t.Fatalf("invalid total block size, expected %d bytes and received %d", expectedTotal, w.m.TotalBlockSize)
+	}
+}
+
+func TestWriter_Merge_with_updated_snapshot(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "primary"); err != nil {
+		t.Fatal(err)
+	}
+	defer w.close()
+
+	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	var chunk *Writer
+	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
+		t.Fatal(err)
+	}
+	defer chunk.close()
+
+	// Initialize chunk
+	chunk.init(w.m, time.Now().UnixNano())
+
+	// Initialize as snapshot
+	chunk.initSnapshot()
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("1"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("2"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.SetIndex(2); err != nil {
+		t.Fatal(err)
+	}
+
+	chunkFilename := chunk.filename
+	chunkSize := chunk.m.TotalBlockSize
+
+	if err = chunk.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = Read(chunkFilename, func(r *Reader) (err error) {
+		if err = w.Merge(r); err != nil {
+			return
+		}
+
+		// Stale merge, this should ignore
+		return w.Merge(r)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	switch {
+	case w.m.CurrentIndex != 2:
+		t.Fatalf("invalid index, expected %d and received %d", 2, w.m.CurrentIndex)
+	case w.m.TotalBlockSize != chunkSize:
+		t.Fatalf("invalid total block size, expected %d bytes and received %d", chunkSize, w.m.TotalBlockSize)
+	}
+}
+
+func TestWriter_Merge_with_updated_snapshot_and_error(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "primary"); err != nil {
+		t.Fatal(err)
+	}
+	defer w.close()
+
+	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	var chunk *Writer
+	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
+		t.Fatal(err)
+	}
+	defer chunk.close()
+
+	// Initialize chunk
+	chunk.init(w.m, time.Now().UnixNano())
+
+	// Initialize as snapshot
+	chunk.initSnapshot()
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("1"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("2"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.SetIndex(2); err != nil {
+		t.Fatal(err)
+	}
+
+	chunkFilename := chunk.filename
+
+	if err = chunk.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Close file to induce error
+	w.f.Close()
+
+	targetErr := fmt.Errorf("truncate %s: file already closed", w.filename)
+	err = Read(chunkFilename, func(r *Reader) (err error) {
+		if err = w.Merge(r); err != nil {
+			return
+		}
+
+		// Stale merge, this should ignore
+		return w.Merge(r)
+	})
+
+	if err = compareErrors(targetErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWriter_Merge_with_reader_error(t *testing.T) {
+	var (
+		w   *Writer
+		err error
+	)
+
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	if w, err = NewWriter("./test_data", "primary"); err != nil {
+		t.Fatal(err)
+	}
+	defer w.close()
+
+	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	var chunk *Writer
+	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
+		t.Fatal(err)
+	}
+	defer chunk.close()
+
+	// Initialize chunk
+	chunk.init(w.m, time.Now().UnixNano())
+
+	// Initialize as snapshot
+	chunk.initSnapshot()
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("1"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("2"), []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.SetIndex(2); err != nil {
+		t.Fatal(err)
+	}
+
+	chunkFilename := chunk.filename
+
+	if err = chunk.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	targetErr := fmt.Errorf("error encountered while copying source blocks: error seeking to first block byte: seek %s: file already closed", chunkFilename)
+	err = Read(chunkFilename, func(r *Reader) (err error) {
+		f, ok := (r.r).(*os.File)
+		if !ok {
+			return fmt.Errorf("unexpected type, exptected %T and received %T", f, r.r)
+		}
+
+		// Close file to induce error
+		f.Close()
+
+		return w.Merge(r)
+	})
+
+	if err = compareErrors(targetErr, err); err != nil {
+		t.Fatal(err)
 	}
 }
 
