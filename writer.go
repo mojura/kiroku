@@ -158,12 +158,6 @@ func (w *Writer) Merge(r *Reader) (err error) {
 	// Get Meta of Reader
 	m := r.Meta()
 
-	// Check to see if the Meta has already been consumed
-	if m.CreatedAt <= w.m.CreatedAt {
-		// Meta is stale, return
-		return
-	}
-
 	switch {
 	case m.CreatedAt <= w.m.CreatedAt:
 		// Meta is stale, return
@@ -199,6 +193,8 @@ func (w *Writer) initSnapshot() {
 	w.m.LastSnapshotAt = w.m.CreatedAt
 	// Reset block count to 0
 	w.m.BlockCount = 0
+	// Reset total block size to 0
+	w.m.TotalBlockSize = 0
 }
 
 func (w *Writer) setSize() (err error) {
