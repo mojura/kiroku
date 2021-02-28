@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hatchify/errors"
 	"github.com/mojura/enkodo"
 )
 
@@ -197,6 +198,88 @@ func TestReader_ForEach(t *testing.T) {
 	}
 }
 
+func TestReader_ForEach_with_seek_error(t *testing.T) {
+	var (
+		c   *Writer
+		err error
+	)
+
+	tcs := readerTestcases
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if err = populateReaderTestcase(c, tcs[:]); err != nil {
+		t.Fatal(err)
+	}
+
+	var r *Reader
+	if r, err = NewReader(c.f); err != nil {
+		t.Fatalf("error initializing reader: %v", err)
+		return
+	}
+
+	if err = c.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedErr := fmt.Errorf("error seeking to first block byte: seek %s: file already closed", c.filename)
+
+	err = r.ForEach(0, func(b *Block) (err error) {
+		return
+	})
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReader_ForEach_with_processor_error(t *testing.T) {
+	var (
+		c   *Writer
+		err error
+	)
+
+	tcs := readerTestcases
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if err = populateReaderTestcase(c, tcs[:]); err != nil {
+		t.Fatal(err)
+	}
+
+	var r *Reader
+	if r, err = NewReader(c.f); err != nil {
+		t.Fatalf("error initializing reader: %v", err)
+		return
+	}
+
+	expectedErr := errors.Error("foobar")
+
+	err = r.ForEach(0, func(b *Block) (err error) {
+		return expectedErr
+	})
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestReader_Copy(t *testing.T) {
 	var (
 		c   *Writer
@@ -234,6 +317,47 @@ func TestReader_Copy(t *testing.T) {
 	}
 
 	if err = testForEach(cr, tcs[:]); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReader_Copy_with_seek_error(t *testing.T) {
+	var (
+		c   *Writer
+		err error
+	)
+
+	tcs := readerTestcases
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if err = populateReaderTestcase(c, tcs[:]); err != nil {
+		t.Fatal(err)
+	}
+
+	var r *Reader
+	if r, err = NewReader(c.f); err != nil {
+		t.Fatalf("error initializing reader: %v", err)
+		return
+	}
+
+	if err = c.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedErr := fmt.Errorf("error seeking to first meta byte: seek %s: file already closed", c.filename)
+
+	_, err = r.Copy(bytes.NewBuffer(nil))
+
+	if err = compareErrors(expectedErr, err); err != nil {
 		t.Fatal(err)
 	}
 }
