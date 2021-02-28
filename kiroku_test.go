@@ -1,12 +1,14 @@
 package kiroku
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hatchify/errors"
 )
@@ -137,6 +139,102 @@ func TestNew_with_loading_unmerged_chunk(t *testing.T) {
 		t.Fatalf("invalid current index, expected %d and received %d", 110, m.CurrentIndex)
 	case m.BlockCount != 10:
 		t.Fatalf("invalid block count, expected %d and received %d", 10, m.BlockCount)
+	}
+}
+
+func TestNew_with_invalid_merging_chunk_permissions(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	var f *os.File
+	if f, err = os.OpenFile("./test_data/test.chunk.moj", os.O_CREATE|os.O_RDWR, 0111); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedErr := fmt.Errorf("error encountered while merging: open %s: permission denied", "test_data/test.chunk.moj")
+
+	if k, err = New("test_data", "test", nil, nil); k != nil {
+		defer k.Close()
+	}
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNew_with_invalid_processing_chunk_permissions(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	var f *os.File
+	if f, err = os.OpenFile("./test_data/test.merged.moj", os.O_CREATE|os.O_RDWR, 0111); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedErr := fmt.Errorf("error encountered while processing: open %s: permission denied", "test_data/test.merged.moj")
+	pfn := func(r *Reader) (err error) { return }
+	if k, err = New("test_data", "test", pfn, nil); k != nil {
+		defer k.Close()
+	}
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNew_with_error_initing_meta(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	var opts Options
+	opts.AvoidMergeOnInit = true
+
+	var f *os.File
+	if f, err = os.OpenFile("./test_data/test.chunk.moj", os.O_CREATE|os.O_RDWR, 0111); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedErr := fmt.Errorf("error initializing meta: open %s: permission denied", "test_data/test.chunk.moj")
+
+	if k, err = New("test_data", "test", nil, &opts); k != nil {
+		defer k.Close()
+	}
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -611,6 +709,115 @@ func TestKiroku_Snapshot_with_error(t *testing.T) {
 		t.Fatalf("invalid error, expected <%v> and received <%v>", targetErr, err)
 		return
 	}
+}
+
+func TestKiroku_rename_with_invalid_permissions(t *testing.T) {
+	var err error
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	var f *os.File
+	if f, err = os.OpenFile("./test_data/test.chunk.moj", os.O_CREATE|os.O_RDWR, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = os.Chmod("test_data", 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	var k Kiroku
+	k.name = "test"
+	k.dir = "test_data"
+
+	unix := time.Now().UnixNano()
+	expectedErr := fmt.Errorf("rename %s test_data/test.merged.%d.moj: permission denied", "test_data/test.chunk.moj", unix)
+	err = k.rename("test_data/test.chunk.moj", "merged", unix)
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = os.Chmod("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestKiroku_processAndRemove_with_invalid_permissions(t *testing.T) {
+	var err error
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	var k Kiroku
+	k.name = "test"
+	k.dir = "test_data"
+
+	if k.c, err = NewWriter(k.dir, k.name); err != nil {
+		t.Fatal(err)
+	}
+
+	var chunk *Writer
+	if chunk, err = NewWriter(k.dir, k.name+".chunk"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.AddBlock(TypeWriteAction, []byte("foo"), []byte("bar")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = chunk.close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = os.Chmod("test_data", 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedErr := fmt.Errorf("remove %s: permission denied", "test_data/test.chunk.moj")
+	err = k.processAndRemove(chunk.filename)
+
+	if err = compareErrors(expectedErr, err); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = os.Chmod("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestKiroku_sleep(t *testing.T) {
+	type testcase struct {
+		ctx      context.Context
+		duration time.Duration
+	}
+
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	tcs := []testcase{
+		{
+			ctx:      context.Background(),
+			duration: time.Millisecond * 100,
+		},
+		{
+			ctx:      cancelled,
+			duration: time.Millisecond * 100,
+		},
+	}
+
+	for _, tc := range tcs {
+		var k Kiroku
+		k.ctx = tc.ctx
+		k.sleep(tc.duration)
+	}
+
 }
 
 func ExampleNew() {

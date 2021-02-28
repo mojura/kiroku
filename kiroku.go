@@ -56,12 +56,6 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor, o *Optio
 		return
 	}
 
-	// Initialize Meta
-	if err = k.initMeta(); err != nil {
-		err = fmt.Errorf("error initializing meta: %v", err)
-		return
-	}
-
 	if !k.opts.AvoidMergeOnInit {
 		// Options do not request avoiding merge on initialization, merge remaining chunks
 		if err = k.handleRemaining("chunk", k.merge); err != nil {
@@ -74,6 +68,12 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor, o *Optio
 		if err = k.handleRemaining("merged", k.processAndRemove); err != nil {
 			return
 		}
+	}
+
+	// Initialize Meta
+	if err = k.initMeta(); err != nil {
+		err = fmt.Errorf("error initializing meta: %v", err)
+		return
 	}
 
 	// Increment jobs waiter
@@ -346,13 +346,12 @@ func (k *Kiroku) sleep(d time.Duration) {
 
 func (k *Kiroku) rename(filename, targetPrefix string, unix int64) (err error) {
 	// Set the new name
-	newName := fmt.Sprintf("%s.%s.%d", k.name, targetPrefix, unix)
+	newName := fmt.Sprintf("%s.%s.%d.moj", k.name, targetPrefix, unix)
 	// Set filename as directory and name joined
 	newFilename := path.Join(k.dir, newName)
 
 	// Rename original filename as new filename
 	if err = os.Rename(filename, newFilename); err != nil {
-		err = fmt.Errorf("error renaming %s from <%s> to <%s>: %v", targetPrefix, filename, newName, err)
 		return
 	}
 
@@ -420,7 +419,6 @@ func (k *Kiroku) handleRemaining(targetPrefix string, fn func(filename string) e
 
 		// Call provided function
 		if err = fn(filename); err != nil {
-			err = fmt.Errorf("error encountered during action for <%s>: <%v>", filename, err)
 			return
 		}
 	}
@@ -464,13 +462,11 @@ func (k *Kiroku) process(filename string) (err error) {
 func (k *Kiroku) processAndRemove(filename string) (err error) {
 	// Process file
 	if err = k.process(filename); err != nil {
-		err = fmt.Errorf("error encountered while processing file <%s>: <%v>", filename, err)
 		return
 	}
 
 	// Remove file
 	if err = os.Remove(filename); err != nil {
-		err = fmt.Errorf("error encountered while removing file <%s>: <%v>", filename, err)
 		return
 	}
 
