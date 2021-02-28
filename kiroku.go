@@ -263,7 +263,7 @@ func (k *Kiroku) getTruncatedName(filename string) (name string) {
 }
 
 func (k *Kiroku) getNext(targetPrefix string) (filename string, ok bool, err error) {
-	fn := walkFn(func(iteratingName string, info os.FileInfo) (err error) {
+	fn := func(iteratingName string, info os.FileInfo) (err error) {
 		// Check to see if current file is a match for the current name and prefix
 		if !k.isWriterMatch(targetPrefix, iteratingName, info) {
 			// This is not a match, return
@@ -275,19 +275,15 @@ func (k *Kiroku) getNext(targetPrefix string) (filename string, ok bool, err err
 		ok = true
 		// Return break
 		return errBreak
-	})
-
-	// Iterate through files within directory
-	if err = filepath.Walk(k.dir, fn); err == errBreak {
-		// Error was break, set to nil
-		err = nil
 	}
 
+	// Iterate through files within directory
+	err = walk(k.dir, fn)
 	return
 }
 
 func (k *Kiroku) getLast(targetPrefix string) (filename string, ok bool, err error) {
-	fn := walkFn(func(iteratingName string, info os.FileInfo) (err error) {
+	fn := func(iteratingName string, info os.FileInfo) (err error) {
 		isMatch := k.isWriterMatch(targetPrefix, iteratingName, info)
 		switch {
 		case !isMatch && !ok:
@@ -305,14 +301,10 @@ func (k *Kiroku) getLast(targetPrefix string) (filename string, ok bool, err err
 			ok = true
 			return
 		}
-	})
-
-	// Iterate through files within directory
-	if err = filepath.Walk(k.dir, fn); err == errBreak {
-		// Error was break, set to nil
-		err = nil
 	}
 
+	// Iterate through files within directory
+	err = walk(k.dir, fn)
 	return
 }
 

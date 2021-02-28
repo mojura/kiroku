@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -22,10 +23,121 @@ func TestNew(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./test_data")
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+
+	var invalidPerms *os.File
+	if invalidPerms, err = os.OpenFile("./test_data/invalid_perms.moj", os.O_CREATE|os.O_RDWR, 0511); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = invalidPerms.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	type testcase struct {
+		dir  string
+		name string
+
+		expectedError error
+	}
+
+	tcs := []testcase{
+		{
+			dir:           "test_data",
+			name:          "tester",
+			expectedError: nil,
+		},
+		{
+			dir:           "invalid_dir",
+			name:          "tester",
+			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: no such file or directory`, "invalid_dir/tester.moj"),
+		},
+		{
+			dir:           "test_data",
+			name:          "invalid_perms",
+			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: permission denied`, "test_data/invalid_perms.moj"),
+		},
+	}
+
+	for _, tc := range tcs {
+		k, err = New(tc.dir, tc.name, nil, nil)
+		if err = compareErrors(tc.expectedError, err); err != nil {
+			t.Fatal(err)
+		}
+
+		if k == nil {
+			continue
+		}
+
+		if err = k.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestNew_with_loading_unmerged_chunk(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	var opts Options
+	opts.AvoidMergeOnInit = true
+	opts.AvoidMergeOnClose = true
+
+	if k, err = New("test_data", "test", nil, &opts); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = k.Transaction(func(txn *Transaction) (err error) {
+		// Set index to 100 to add an extra potential for failure on unprocessed chunk importing
+		if err = txn.SetIndex(100); err != nil {
+			return
+		}
+
+		var index uint64
+		// Create 10 entries
+		for i := 0; i < 10; i++ {
+			if index, err = txn.NextIndex(); err != nil {
+				return
+			}
+
+			indexStr := strconv.FormatUint(index, 10)
+
+			if err = txn.AddBlock(TypeWriteAction, []byte(indexStr), []byte("value")); err != nil {
+				return
+			}
+		}
+
+		return
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = k.Close(); err != nil {
+		return
+	}
+
+	if k, err = New("test_data", "test", nil, &opts); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
+
+	var m Meta
+	if m, err = k.Meta(); err != nil {
+		t.Fatal(err)
+	}
+
+	switch {
+	case m.CurrentIndex != 110:
+		t.Fatalf("invalid current index, expected %d and received %d", 110, m.CurrentIndex)
+	case m.BlockCount != 10:
+		t.Fatalf("invalid block count, expected %d and received %d", 10, m.BlockCount)
+	}
 }
 
 func TestNew_with_options(t *testing.T) {
@@ -106,6 +218,15 @@ func TestNew_with_options(t *testing.T) {
 		if err = fn(tc); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestKiroku_initMeta_with_error(t *testing.T) {
+	var k Kiroku
+	k.dir = "test_data"
+	expectedErr := fmt.Errorf("lstat %s: no such file or directory", "test_data")
+	if err := compareErrors(expectedErr, k.initMeta()); err != nil {
+		t.Fatal(err)
 	}
 }
 

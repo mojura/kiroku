@@ -1,17 +1,18 @@
 package kiroku
 
 import (
-	"io"
+	"fmt"
 	"os"
 	"testing"
 )
 
-func Test_walkFn(t *testing.T) {
-	fn := walkFn(func(filename string, info os.FileInfo) (err error) {
+func Test_walk(t *testing.T) {
+	expectedErr := fmt.Errorf("lstat %s: no such file or directory", "invalid_dir")
+	fn := func(filename string, info os.FileInfo) (err error) {
 		return
-	})
+	}
 
-	if err := fn("filename.txt", nil, io.EOF); err != nil {
+	if err := compareErrors(expectedErr, walk("invalid_dir", fn)); err != nil {
 		t.Fatal(err)
 	}
 }

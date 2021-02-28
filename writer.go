@@ -19,7 +19,6 @@ func NewWriter(dir, name string) (wp *Writer, err error) {
 	// Open target file
 	// Note: This will create the file if it does not exist
 	if f, err = os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0744); err != nil {
-		err = fmt.Errorf("error opening file \"%s\": %v", filename, err)
 		return
 	}
 
