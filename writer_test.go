@@ -36,7 +36,7 @@ func Test_NewWriter(t *testing.T) {
 		{
 			dir:           "./foobar_no_dir",
 			name:          "testie",
-			expectedError: fmt.Errorf(`error opening file "foobar_no_dir/testie.moj": open foobar_no_dir/testie.moj: no such file or directory`),
+			expectedError: fmt.Errorf(`open foobar_no_dir/testie.moj: no such file or directory`),
 		},
 	}
 
