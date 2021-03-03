@@ -111,3 +111,8 @@ func (r *Reader) CopyBlocks(destination io.Writer) (n int64, err error) {
 	// Copy chunk blocks to destination writer
 	return io.Copy(destination, r.r)
 }
+
+// ReadSeeker will return the Reader's underlying ReadSeeker
+func (r *Reader) ReadSeeker() io.ReadSeeker {
+	return r.r
+}
