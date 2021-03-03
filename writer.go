@@ -73,6 +73,11 @@ type Writer struct {
 	closed bool
 }
 
+// Meta will return a copy of the Writer's underlying Meta
+func (w *Writer) Meta() Meta {
+	return *w.m
+}
+
 // GetIndex will get the current index value
 func (w *Writer) GetIndex() (index uint64, err error) {
 	w.mux.RLock()
