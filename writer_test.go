@@ -117,7 +117,7 @@ func TestWriter_GetIndex_on_closed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = w.close(); err != nil {
+	if err = w.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -145,7 +145,7 @@ func TestWriter_SetIndex_on_closed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = w.close(); err != nil {
+	if err = w.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -198,7 +198,7 @@ func TestWriter_NextIndex_on_closed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = w.close(); err != nil {
+	if err = w.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -247,7 +247,7 @@ func TestWriter_AddBlock_on_closed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = w.close(); err != nil {
+	if err = w.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -270,7 +270,7 @@ func TestWriter_AddBlock_with_invalid_type(t *testing.T) {
 	if w, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 	}
-	defer w.close()
+	defer w.Close()
 
 	// Close file to incur error
 	w.f.Close()
@@ -300,7 +300,7 @@ func TestWriter_AddBlock_with_closed_file(t *testing.T) {
 	if w, err = NewWriter("./test_data", "testie"); err != nil {
 		t.Fatal(err)
 	}
-	defer w.close()
+	defer w.Close()
 
 	// Close file to incur error
 	w.f.Close()
@@ -327,7 +327,7 @@ func TestWriter_Merge(t *testing.T) {
 	if w, err = NewWriter("./test_data", "primary"); err != nil {
 		t.Fatal(err)
 	}
-	defer w.close()
+	defer w.Close()
 
 	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
 		t.Fatal(err)
@@ -337,7 +337,7 @@ func TestWriter_Merge(t *testing.T) {
 	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
 		t.Fatal(err)
 	}
-	defer chunk.close()
+	defer chunk.Close()
 
 	// Initialize chunk
 	chunk.init(w.m, time.Now().UnixNano())
@@ -357,7 +357,7 @@ func TestWriter_Merge(t *testing.T) {
 	chunkFilename := chunk.filename
 	chunkSize := chunk.m.TotalBlockSize
 
-	if err = chunk.close(); err != nil {
+	if err = chunk.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -392,7 +392,7 @@ func TestWriter_Merge_stale(t *testing.T) {
 	if w, err = NewWriter("./test_data", "primary"); err != nil {
 		t.Fatal(err)
 	}
-	defer w.close()
+	defer w.Close()
 
 	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
 		t.Fatal(err)
@@ -402,7 +402,7 @@ func TestWriter_Merge_stale(t *testing.T) {
 	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
 		t.Fatal(err)
 	}
-	defer chunk.close()
+	defer chunk.Close()
 
 	// Initialize chunk
 	chunk.init(w.m, time.Now().UnixNano())
@@ -422,7 +422,7 @@ func TestWriter_Merge_stale(t *testing.T) {
 	chunkFilename := chunk.filename
 	chunkSize := chunk.m.TotalBlockSize
 
-	if err = chunk.close(); err != nil {
+	if err = chunk.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -462,7 +462,7 @@ func TestWriter_Merge_with_updated_snapshot(t *testing.T) {
 	if w, err = NewWriter("./test_data", "primary"); err != nil {
 		t.Fatal(err)
 	}
-	defer w.close()
+	defer w.Close()
 
 	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
 		t.Fatal(err)
@@ -472,7 +472,7 @@ func TestWriter_Merge_with_updated_snapshot(t *testing.T) {
 	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
 		t.Fatal(err)
 	}
-	defer chunk.close()
+	defer chunk.Close()
 
 	// Initialize chunk
 	chunk.init(w.m, time.Now().UnixNano())
@@ -495,7 +495,7 @@ func TestWriter_Merge_with_updated_snapshot(t *testing.T) {
 	chunkFilename := chunk.filename
 	chunkSize := chunk.m.TotalBlockSize
 
-	if err = chunk.close(); err != nil {
+	if err = chunk.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -532,7 +532,7 @@ func TestWriter_Merge_with_updated_snapshot_and_error(t *testing.T) {
 	if w, err = NewWriter("./test_data", "primary"); err != nil {
 		t.Fatal(err)
 	}
-	defer w.close()
+	defer w.Close()
 
 	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
 		t.Fatal(err)
@@ -542,7 +542,7 @@ func TestWriter_Merge_with_updated_snapshot_and_error(t *testing.T) {
 	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
 		t.Fatal(err)
 	}
-	defer chunk.close()
+	defer chunk.Close()
 
 	// Initialize chunk
 	chunk.init(w.m, time.Now().UnixNano())
@@ -564,7 +564,7 @@ func TestWriter_Merge_with_updated_snapshot_and_error(t *testing.T) {
 
 	chunkFilename := chunk.filename
 
-	if err = chunk.close(); err != nil {
+	if err = chunk.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -600,7 +600,7 @@ func TestWriter_Merge_with_reader_error(t *testing.T) {
 	if w, err = NewWriter("./test_data", "primary"); err != nil {
 		t.Fatal(err)
 	}
-	defer w.close()
+	defer w.Close()
 
 	if err = w.AddBlock(TypeWriteAction, []byte("0"), []byte("value")); err != nil {
 		t.Fatal(err)
@@ -610,7 +610,7 @@ func TestWriter_Merge_with_reader_error(t *testing.T) {
 	if chunk, err = NewWriter("./test_data", "chunk"); err != nil {
 		t.Fatal(err)
 	}
-	defer chunk.close()
+	defer chunk.Close()
 
 	// Initialize chunk
 	chunk.init(w.m, time.Now().UnixNano())
@@ -632,7 +632,7 @@ func TestWriter_Merge_with_reader_error(t *testing.T) {
 
 	chunkFilename := chunk.filename
 
-	if err = chunk.close(); err != nil {
+	if err = chunk.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -741,11 +741,11 @@ func TestWriter_close_already_closed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = compareErrors(nil, w.close()); err != nil {
+	if err = compareErrors(nil, w.Close()); err != nil {
 		t.Fatal(err)
 	}
 
-	if err = compareErrors(errors.ErrIsClosed, w.close()); err != nil {
+	if err = compareErrors(errors.ErrIsClosed, w.Close()); err != nil {
 		t.Fatal(err)
 	}
 }

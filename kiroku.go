@@ -221,7 +221,7 @@ func (k *Kiroku) Close() (err error) {
 	}
 
 	// Close primary chunk
-	errs.Push(k.c.close())
+	errs.Push(k.c.Close())
 	return errs.Err()
 }
 
@@ -477,7 +477,7 @@ func (k *Kiroku) processAndRemove(filename string) (err error) {
 func (k *Kiroku) deleteChunk(w *Writer) (err error) {
 	var errs errors.ErrorList
 	// Close target chunk
-	errs.Push(w.close())
+	errs.Push(w.Close())
 	// Remove target chunk
 	errs.Push(os.Remove(w.filename))
 	return errs.Err()
@@ -527,7 +527,7 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 	newMeta := *w.m
 
 	// Close transaction chunk
-	if err = w.close(); err != nil {
+	if err = w.Close(); err != nil {
 		err = fmt.Errorf("error closing chunk: %v", err)
 		return
 	}

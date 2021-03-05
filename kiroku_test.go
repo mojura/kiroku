@@ -772,7 +772,7 @@ func TestKiroku_processAndRemove_with_invalid_permissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = chunk.close(); err != nil {
+	if err = chunk.Close(); err != nil {
 		t.Fatal(err)
 	}
 

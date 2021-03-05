@@ -193,6 +193,31 @@ func (w *Writer) Filename() string {
 	return w.filename
 }
 
+// Close will close a writer
+func (w *Writer) Close() (err error) {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+
+	if w.closed {
+		return errors.ErrIsClosed
+	}
+
+	w.closed = true
+
+	var errs errors.ErrorList
+	if w.w != nil {
+		errs.Push(w.w.Close())
+	}
+
+	errs.Push(w.unmapMeta())
+
+	if w.f != nil {
+		errs.Push(w.f.Close())
+	}
+
+	return errs.Err()
+}
+
 func (w *Writer) init(m *Meta, createdAt int64) {
 	// Populate meta info
 	w.m.merge(m)
@@ -265,35 +290,11 @@ func (w *Writer) unmapMeta() (err error) {
 	return
 }
 
-func (w *Writer) close() (err error) {
-	w.mux.Lock()
-	defer w.mux.Unlock()
-
-	if w.closed {
-		return errors.ErrIsClosed
-	}
-
-	w.closed = true
-
-	var errs errors.ErrorList
-	if w.w != nil {
-		errs.Push(w.w.Close())
-	}
-
-	errs.Push(w.unmapMeta())
-
-	if w.f != nil {
-		errs.Push(w.f.Close())
-	}
-
-	return errs.Err()
-}
-
 // Close will close the selected instance of Writer
 func (w *Writer) closeIfError(err error) {
 	if err == nil {
 		return
 	}
 
-	w.close()
+	w.Close()
 }

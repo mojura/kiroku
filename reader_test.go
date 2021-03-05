@@ -226,7 +226,7 @@ func TestReader_ForEach_with_seek_error(t *testing.T) {
 		return
 	}
 
-	if err = c.close(); err != nil {
+	if err = c.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -349,7 +349,7 @@ func TestReader_Copy_with_seek_error(t *testing.T) {
 		return
 	}
 
-	if err = c.close(); err != nil {
+	if err = c.Close(); err != nil {
 		t.Fatal(err)
 	}
 
