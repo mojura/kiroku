@@ -188,6 +188,11 @@ func (w *Writer) Merge(r *Reader) (err error) {
 	return
 }
 
+// Filename will return the underlying filename of the Writer
+func (w *Writer) Filename() string {
+	return w.filename
+}
+
 func (w *Writer) init(m *Meta, createdAt int64) {
 	// Populate meta info
 	w.m.merge(m)

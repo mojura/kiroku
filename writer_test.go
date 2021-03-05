@@ -654,6 +654,46 @@ func TestWriter_Merge_with_reader_error(t *testing.T) {
 	}
 }
 
+func TestWriter_Filename(t *testing.T) {
+	var err error
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	type testcase struct {
+		dir  string
+		name string
+
+		expectedFilename string
+	}
+
+	tcs := []testcase{
+		{
+			dir:              "./test_data",
+			name:             "testie",
+			expectedFilename: "test_data/testie.moj",
+		},
+		{
+			dir:              "./test_data",
+			name:             "foobar",
+			expectedFilename: "test_data/foobar.moj",
+		},
+	}
+
+	for _, tc := range tcs {
+		var w *Writer
+		if w, err = NewWriter(tc.dir, tc.name); err != nil {
+			t.Fatal(err)
+		}
+
+		if filename := w.Filename(); filename != tc.expectedFilename {
+			t.Fatalf("invalid filename, expected <%s> and received <%s>", tc.expectedFilename, filename)
+		}
+	}
+}
+
 func TestWriter_setSize_on_uninitialized(t *testing.T) {
 	var err error
 	w := &Writer{}
