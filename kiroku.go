@@ -18,14 +18,14 @@ const errBreak = errors.Error("break")
 
 // New will initialize a new Kiroku instance
 // Note: Processor and Options are optional
-func New(dir, name string, p Processor, o *Options) (kp *Kiroku, err error) {
+func New(dir, name string, e Exporter, o *Options) (kp *Kiroku, err error) {
 	// Call NewWithContext with a background context
-	return NewWithContext(context.Background(), dir, name, p, o)
+	return NewWithContext(context.Background(), dir, name, e, o)
 }
 
 // NewWithContext will initialize a new Kiroku instance with a provided context.Context
 // Note: Processor and Options are optional
-func NewWithContext(ctx context.Context, dir, name string, p Processor, o *Options) (kp *Kiroku, err error) {
+func NewWithContext(ctx context.Context, dir, name string, e Exporter, o *Options) (kp *Kiroku, err error) {
 	var k Kiroku
 	// Set output prefix
 	prefix := fmt.Sprintf("Kiroku (%v)", name)
@@ -37,12 +37,12 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor, o *Optio
 	k.name = name
 	// Initialize cancel context with the provided context as the parent
 	k.ctx, k.cancelFn = context.WithCancel(ctx)
-	// Set processor
+	// Set exporter
 	// Note: This field is optional and might be nil
-	k.p = p
+	k.e = e
 	// Initialize semaphores
 	k.ms = make(semaphore, 1)
-	k.ps = make(semaphore, 1)
+	k.es = make(semaphore, 1)
 
 	// Check to see if options were provided
 	if o != nil {
@@ -63,13 +63,6 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor, o *Optio
 		}
 	}
 
-	if !k.opts.AvoidProcessOnInit {
-		// Options do not request avoiding merge on initialization, process remaining merged chunks
-		if err = k.handleRemaining("merged", k.processAndRemove); err != nil {
-			return
-		}
-	}
-
 	// Initialize Meta
 	if err = k.initMeta(); err != nil {
 		err = fmt.Errorf("error initializing meta: %v", err)
@@ -80,7 +73,7 @@ func NewWithContext(ctx context.Context, dir, name string, p Processor, o *Optio
 	k.jobs.Add(2)
 	// Initialize watch job
 	go k.watch("chunk", k.ms, k.merge)
-	go k.watch("merged", k.ps, k.processAndRemove)
+	go k.watch("merged", k.es, k.exportAndRemove)
 
 	// Associate returning pointer to created Kiroku
 	kp = &k
@@ -103,8 +96,8 @@ type Kiroku struct {
 	m Meta
 	// Merging semaphore
 	ms semaphore
-	// Processing semaphore
-	ps semaphore
+	// Exporting semaphore
+	es semaphore
 
 	// Primary chunk
 	c *Writer
@@ -114,8 +107,8 @@ type Kiroku struct {
 	// Context cancel func
 	cancelFn func()
 
-	// Post processing func
-	p Processor
+	// Exporter
+	e Exporter
 
 	// Directory to store chunks
 	dir string
@@ -215,9 +208,9 @@ func (k *Kiroku) Close() (err error) {
 		errs.Push(k.handleRemaining("chunk", k.merge))
 	}
 
-	if !k.opts.AvoidProcessOnClose {
+	if !k.opts.AvoidExportOnClose {
 		// Options do not request avoiding merge on close, process remaining merged chunks
-		errs.Push(k.handleRemaining("merged", k.processAndRemove))
+		errs.Push(k.handleRemaining("merged", k.exportAndRemove))
 	}
 
 	// Close primary chunk
@@ -440,29 +433,42 @@ func (k *Kiroku) merge(filename string) (err error) {
 		return
 	}
 
-	// Send signal to processing semaphore
-	k.ps.send()
+	// Send signal to exporting semaphore
+	k.es.send()
 	return
 }
 
-func (k *Kiroku) process(filename string) (err error) {
-	if k.p == nil {
-		// Processor not set, return
+func (k *Kiroku) export(filename string) (err error) {
+	if k.e == nil {
+		// Exporter not set, return
 		return
 	}
 
-	// Read file and call processor
-	if err = Read(filename, k.p); err != nil {
-		err = fmt.Errorf("error encountered while processing: %v", err)
+	// Read file and call Exporter.Export
+	if err = Read(filename, func(r *Reader) (err error) {
+		// Create the export filename using the service name and the created at value
+		// of the current chunk.
+		exportFilename := generateFilename(k.name, r.Meta().CreatedAt)
+		// Get underlying io.ReadSeeker from Reader
+		rs := r.ReadSeeker()
+		// Seek to beginning of the file
+		if _, err = rs.Seek(0, 0); err != nil {
+			return
+		}
+
+		// Export file
+		return k.e.Export(exportFilename, rs)
+	}); err != nil {
+		err = fmt.Errorf("error encountered while exporting: %v", err)
 		return
 	}
 
 	return
 }
 
-func (k *Kiroku) processAndRemove(filename string) (err error) {
-	// Process file
-	if err = k.process(filename); err != nil {
+func (k *Kiroku) exportAndRemove(filename string) (err error) {
+	// Export file
+	if err = k.export(filename); err != nil {
 		return
 	}
 

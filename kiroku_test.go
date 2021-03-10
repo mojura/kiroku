@@ -3,6 +3,7 @@ package kiroku
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -194,8 +195,9 @@ func TestNew_with_invalid_processing_chunk_permissions(t *testing.T) {
 	}
 
 	expectedErr := fmt.Errorf("error encountered while processing: open %s: permission denied", "test_data/test.merged.moj")
-	pfn := func(r *Reader) (err error) { return }
-	if k, err = New("test_data", "test", pfn, nil); k != nil {
+	exp := &testExporter{}
+
+	if k, err = New("test_data", "test", exp, nil); k != nil {
 		defer k.Close()
 	}
 
@@ -255,42 +257,37 @@ func TestNew_with_options(t *testing.T) {
 		},
 		{
 			options: &Options{
-				AvoidMergeOnInit:    false,
-				AvoidProcessOnInit:  false,
-				AvoidMergeOnClose:   false,
-				AvoidProcessOnClose: false,
+				AvoidMergeOnInit:   false,
+				AvoidMergeOnClose:  false,
+				AvoidExportOnClose: false,
 			},
 		},
 		{
 			options: &Options{
-				AvoidMergeOnInit:    true,
-				AvoidProcessOnInit:  false,
-				AvoidMergeOnClose:   false,
-				AvoidProcessOnClose: false,
+				AvoidMergeOnInit:   true,
+				AvoidMergeOnClose:  false,
+				AvoidExportOnClose: false,
 			},
 		},
 		{
 			options: &Options{
-				AvoidMergeOnInit:    true,
-				AvoidProcessOnInit:  true,
-				AvoidMergeOnClose:   false,
-				AvoidProcessOnClose: false,
+				AvoidMergeOnInit:   true,
+				AvoidMergeOnClose:  false,
+				AvoidExportOnClose: false,
 			},
 		},
 		{
 			options: &Options{
-				AvoidMergeOnInit:    true,
-				AvoidProcessOnInit:  true,
-				AvoidMergeOnClose:   true,
-				AvoidProcessOnClose: false,
+				AvoidMergeOnInit:   true,
+				AvoidMergeOnClose:  true,
+				AvoidExportOnClose: false,
 			},
 		},
 		{
 			options: &Options{
-				AvoidMergeOnInit:    true,
-				AvoidProcessOnInit:  true,
-				AvoidMergeOnClose:   true,
-				AvoidProcessOnClose: true,
+				AvoidMergeOnInit:   true,
+				AvoidMergeOnClose:  true,
+				AvoidExportOnClose: true,
 			},
 		},
 	}
@@ -448,7 +445,7 @@ func TestKiroku_Meta_on_closed(t *testing.T) {
 	}
 }
 
-func TestKiroku_Transaction_with_standard_processor(t *testing.T) {
+func TestKiroku_Transaction_with_nil_exporter(t *testing.T) {
 	var (
 		k   *Kiroku
 		err error
@@ -519,12 +516,12 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	pfn := func(r *Reader) (err error) {
-		wg.Done()
-		return
+
+	exp := &testExporter{
+		wg: &wg,
 	}
 
-	if k, err = New("./test_data", "tester", pfn, nil); err != nil {
+	if k, err = New("./test_data", "tester", exp, nil); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -545,7 +542,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if k, err = New("test_data", "tester", pfn, nil); err != nil {
+	if k, err = New("test_data", "tester", exp, nil); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -748,7 +745,7 @@ func TestKiroku_rename_with_invalid_permissions(t *testing.T) {
 	}
 }
 
-func TestKiroku_processAndRemove_with_invalid_permissions(t *testing.T) {
+func TestKiroku_exportAndRemove_with_invalid_permissions(t *testing.T) {
 	var err error
 	if err = os.Mkdir("test_data", 0744); err != nil {
 		t.Fatal(err)
@@ -781,7 +778,7 @@ func TestKiroku_processAndRemove_with_invalid_permissions(t *testing.T) {
 	}
 
 	expectedErr := fmt.Errorf("remove %s: permission denied", "test_data/test.chunk.moj")
-	err = k.processAndRemove(chunk.filename)
+	err = k.exportAndRemove(chunk.filename)
 
 	if err = compareErrors(expectedErr, err); err != nil {
 		t.Fatal(err)
@@ -828,14 +825,15 @@ func ExampleNew() {
 	}
 }
 
-func ExampleNew_with_custom_Processor() {
-	var err error
-	pfn := func(r *Reader) (err error) {
-		fmt.Println("Hello chunk!", r.Meta())
-		return
-	}
+func ExampleNew_with_custom_Exporter() {
+	var (
+		e   Exporter
+		err error
+	)
 
-	if testKiroku, err = New("./test_data", "tester", pfn, nil); err != nil {
+	// Utilize any Exporter, see https://github.com/mojura/sync-s3 for an example
+
+	if testKiroku, err = New("./test_data", "tester", e, nil); err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -876,4 +874,17 @@ func ExampleKiroku_Snapshot() {
 		log.Fatal(err)
 		return
 	}
+}
+
+type testExporter struct {
+	wg *sync.WaitGroup
+}
+
+func (e *testExporter) Export(filename string, r io.Reader) (err error) {
+	if e.wg == nil {
+		return
+	}
+
+	e.wg.Done()
+	return
 }
