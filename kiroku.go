@@ -504,7 +504,7 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 
 	var w *Writer
 	// Initialize a new chunk Writer
-	if w, err = NewWriter(k.dir, name); err != nil {
+	if w, err = newWriter(k.dir, name); err != nil {
 		return
 	}
 

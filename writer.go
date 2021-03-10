@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 
 	"github.com/edsrzf/mmap-go"
 	"github.com/hatchify/errors"
@@ -13,6 +14,22 @@ import (
 
 // NewWriter will initialize a new Writer instance
 func NewWriter(dir, name string) (wp *Writer, err error) {
+	// Create a new writer
+	if wp, err = newWriter(dir, name); err != nil {
+		return
+	}
+
+	if wp.m.CreatedAt > 0 {
+		// This writer has already been initialized, return
+		return
+	}
+
+	// This writer has not been initialized, call init
+	wp.init(nil, time.Now().UnixNano())
+	return
+}
+
+func newWriter(dir, name string) (wp *Writer, err error) {
 	var f *os.File
 	// Set filename as a combination of the provided directory, name, and a .moj extension
 	filename := path.Join(dir, name+".moj")
