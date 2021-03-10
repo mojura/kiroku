@@ -174,7 +174,7 @@ func TestNew_with_invalid_merging_chunk_permissions(t *testing.T) {
 	}
 }
 
-func TestNew_with_invalid_processing_chunk_permissions(t *testing.T) {
+func TestNew_with_invalid_exporting_chunk_permissions(t *testing.T) {
 	var (
 		k   *Kiroku
 		err error
@@ -194,14 +194,14 @@ func TestNew_with_invalid_processing_chunk_permissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedErr := fmt.Errorf("error encountered while processing: open %s: permission denied", "test_data/test.merged.moj")
+	expectedErr := fmt.Errorf("error encountered while exporting: open %s: permission denied", "test_data/test.merged.moj")
 	exp := &testExporter{}
 
-	if k, err = New("test_data", "test", exp, nil); k != nil {
-		defer k.Close()
+	if k, err = New("test_data", "test", exp, nil); err != nil {
+		t.Fatal(err)
 	}
 
-	if err = compareErrors(expectedErr, err); err != nil {
+	if err = compareErrors(expectedErr, k.Close()); err != nil {
 		t.Fatal(err)
 	}
 }
