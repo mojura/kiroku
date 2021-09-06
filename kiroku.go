@@ -529,6 +529,10 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 		return
 	}
 
+	return k.importWriter(w)
+}
+
+func (k *Kiroku) importWriter(w *Writer) (err error) {
 	// Get Meta from transaction chunk
 	newMeta := *w.m
 
@@ -539,7 +543,7 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 	}
 
 	// Rename to chunk with
-	if err = k.rename(w.filename, "chunk", unix); err != nil {
+	if err = k.rename(w.filename, "chunk", newMeta.CreatedAt); err != nil {
 		return
 	}
 
