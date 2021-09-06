@@ -13,22 +13,22 @@ import (
 )
 
 // NewMirror will initialize a new Mirror instance
-func NewMirror(dir, name string, i Importer, onImport Processor) (mp *Mirror, err error) {
+func NewMirror(dir, name string, i Importer, opts *MirrorOptions) (mp *Mirror, err error) {
 	// Call NewMirrorWithContext with a background context
-	return NewMirrorWithContext(context.Background(), dir, name, i, onImport)
+	return NewMirrorWithContext(context.Background(), dir, name, i, opts)
 }
 
 // NewMirrorWithContext will initialize a new Mirror instance with a provided context.Context
-func NewMirrorWithContext(ctx context.Context, dir, name string, i Importer, onImport Processor) (mp *Mirror, err error) {
+func NewMirrorWithContext(ctx context.Context, dir, name string, i Importer, opts *MirrorOptions) (mp *Mirror, err error) {
 	var m Mirror
-	if m.k, err = NewWithContext(ctx, dir, name, nil, nil); err != nil {
+	if m.k, err = NewWithContext(ctx, dir, name, nil, &opts.Options); err != nil {
 		return
 	}
 
 	scribePrefix := fmt.Sprintf("Kiroku [%s] (Mirror)", name)
 	m.out = scribe.New(scribePrefix)
 	m.i = i
-	m.onImport = onImport
+	m.opts = opts
 	m.swg.Add(1)
 	go m.scan()
 	mp = &m
@@ -43,7 +43,7 @@ type Mirror struct {
 	k *Kiroku
 	i Importer
 
-	onImport Processor
+	opts *MirrorOptions
 
 	swg sync.WaitGroup
 }
@@ -85,7 +85,7 @@ func (m *Mirror) scan() {
 		var f *os.File
 		if f, err = os.Create(filepath); err != nil {
 			m.out.Debugf("Error creating file: %v", err)
-			// TODO: Maybe sleep here
+			time.Sleep(time.Second * 10)
 			continue
 		}
 
