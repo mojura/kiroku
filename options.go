@@ -9,6 +9,13 @@ const (
 	ErrEmptyName = errors.Error("invalid name, cannot be empty")
 )
 
+// MakeOptions will create new Options
+func MakeOptions(dir, name string) (o Options) {
+	o.Dir = dir
+	o.Name = name
+	return
+}
+
 // Options represent Kiroku options
 type Options struct {
 	Dir  string
