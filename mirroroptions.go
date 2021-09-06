@@ -11,6 +11,14 @@ const (
 	DefaultEndOfResultsDelay = time.Second * 10
 )
 
+// MakeMirrorOptions will create new Mirror Options
+func MakeMirrorOptions(dir, name string, onImport Processor) (o MirrorOptions) {
+	o.Dir = dir
+	o.Name = name
+	o.OnImport = onImport
+	return
+}
+
 // MirrorOptions represent Mirror options
 type MirrorOptions struct {
 	Options
