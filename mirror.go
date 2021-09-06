@@ -13,19 +13,19 @@ import (
 )
 
 // NewMirror will initialize a new Mirror instance
-func NewMirror(dir, name string, i Importer, opts *MirrorOptions) (mp *Mirror, err error) {
+func NewMirror(opts MirrorOptions, i Importer) (mp *Mirror, err error) {
 	// Call NewMirrorWithContext with a background context
-	return NewMirrorWithContext(context.Background(), dir, name, i, opts)
+	return NewMirrorWithContext(context.Background(), opts, i)
 }
 
 // NewMirrorWithContext will initialize a new Mirror instance with a provided context.Context
-func NewMirrorWithContext(ctx context.Context, dir, name string, i Importer, opts *MirrorOptions) (mp *Mirror, err error) {
+func NewMirrorWithContext(ctx context.Context, opts MirrorOptions, i Importer) (mp *Mirror, err error) {
 	var m Mirror
-	if m.k, err = NewWithContext(ctx, dir, name, nil, &opts.Options); err != nil {
+	if m.k, err = NewWithContext(ctx, opts.Options, nil); err != nil {
 		return
 	}
 
-	scribePrefix := fmt.Sprintf("Kiroku [%s] (Mirror)", name)
+	scribePrefix := fmt.Sprintf("Kiroku [%s] (Mirror)", opts.Name)
 	m.out = scribe.New(scribePrefix)
 	m.i = i
 	m.opts = opts
@@ -43,7 +43,7 @@ type Mirror struct {
 	k *Kiroku
 	i Importer
 
-	opts *MirrorOptions
+	opts MirrorOptions
 
 	swg sync.WaitGroup
 }
@@ -62,10 +62,10 @@ func (m *Mirror) scan() {
 		return
 	}
 
-	prefix := m.k.name + "."
+	prefix := m.k.opts.Name + "."
 
 	if meta.CreatedAt > 0 {
-		lastFile = generateFilename(m.k.name, meta.CreatedAt)
+		lastFile = generateFilename(m.k.opts.Name, meta.CreatedAt)
 	}
 
 	for !m.k.isClosed() {
@@ -80,7 +80,7 @@ func (m *Mirror) scan() {
 			m.out.Debugf("GetNext error: %v", err)
 		}
 
-		filepath := path.Join(m.k.dir, filename)
+		filepath := path.Join(m.k.opts.Dir, filename)
 
 		var f *os.File
 		if f, err = os.Create(filepath); err != nil {

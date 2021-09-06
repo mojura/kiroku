@@ -62,7 +62,8 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		k, err = New(tc.dir, tc.name, nil, nil)
+		opts := MakeOptions(tc.dir, tc.name)
+		k, err = New(opts, nil)
 		if err = compareErrors(tc.expectedError, err); err != nil {
 			t.Fatal(err)
 		}
@@ -88,11 +89,11 @@ func TestNew_with_loading_unmerged_chunk(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	var opts Options
+	opts := MakeOptions("test_data", "test")
 	opts.AvoidMergeOnInit = true
 	opts.AvoidMergeOnClose = true
 
-	if k, err = New("test_data", "test", nil, &opts); err != nil {
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -125,7 +126,7 @@ func TestNew_with_loading_unmerged_chunk(t *testing.T) {
 		return
 	}
 
-	if k, err = New("test_data", "test", nil, &opts); err != nil {
+	if k, err = New(MakeOptions("test_data", "test"), nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -165,7 +166,8 @@ func TestNew_with_invalid_merging_chunk_permissions(t *testing.T) {
 
 	expectedErr := fmt.Errorf("error encountered while merging: open %s: permission denied", "test_data/test.chunk.moj")
 
-	if k, err = New("test_data", "test", nil, nil); k != nil {
+	opts := MakeOptions("test_data", "test")
+	if k, err = New(opts, nil); k != nil {
 		defer k.Close()
 	}
 
@@ -197,7 +199,8 @@ func TestNew_with_invalid_exporting_chunk_permissions(t *testing.T) {
 	expectedErr := fmt.Errorf("error encountered while exporting: open %s: permission denied", "test_data/test.merged.moj")
 	exp := &testExporter{}
 
-	if k, err = New("test_data", "test", exp, nil); err != nil {
+	opts := MakeOptions("test_data", "test")
+	if k, err = New(opts, exp); err != nil {
 		t.Fatal(err)
 	}
 
@@ -217,9 +220,6 @@ func TestNew_with_error_initing_meta(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	var opts Options
-	opts.AvoidMergeOnInit = true
-
 	var f *os.File
 	if f, err = os.OpenFile("./test_data/test.chunk.moj", os.O_CREATE|os.O_RDWR, 0111); err != nil {
 		t.Fatal(err)
@@ -231,7 +231,9 @@ func TestNew_with_error_initing_meta(t *testing.T) {
 
 	expectedErr := fmt.Errorf("error initializing meta: open %s: permission denied", "test_data/test.chunk.moj")
 
-	if k, err = New("test_data", "test", nil, &opts); k != nil {
+	opts := MakeOptions("test_data", "test")
+	opts.AvoidMergeOnInit = true
+	if k, err = New(opts, nil); k != nil {
 		defer k.Close()
 	}
 
@@ -252,9 +254,6 @@ func TestNew_with_options(t *testing.T) {
 	}
 
 	tcs := []testcase{
-		{
-			options: nil,
-		},
 		{
 			options: &Options{
 				AvoidMergeOnInit:   false,
@@ -297,8 +296,10 @@ func TestNew_with_options(t *testing.T) {
 			return
 		}
 		defer os.RemoveAll("./test_data")
-
-		if k, err = New("test_data", "tester", nil, tc.options); err != tc.err {
+		opts := *tc.options
+		opts.Dir = "test_data"
+		opts.Name = "tester"
+		if k, err = New(opts, nil); err != tc.err {
 			return fmt.Errorf("invalid error, expected <%v> and received <%v>", tc.err, err)
 		}
 
@@ -318,7 +319,7 @@ func TestNew_with_options(t *testing.T) {
 
 func TestKiroku_initMeta_with_error(t *testing.T) {
 	var k Kiroku
-	k.dir = "test_data"
+	k.opts.Dir = "test_data"
 	expectedErr := fmt.Errorf("lstat %s: no such file or directory", "test_data")
 	if err := compareErrors(expectedErr, k.initMeta()); err != nil {
 		t.Fatal(err)
@@ -335,7 +336,8 @@ func TestKiroku_Filename(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./test_data")
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -360,7 +362,8 @@ func TestKiroku_Filename_on_closed(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./test_data")
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -384,7 +387,8 @@ func TestKiroku_Meta(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -422,7 +426,8 @@ func TestKiroku_Meta_on_closed(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -456,7 +461,8 @@ func TestKiroku_Transaction_with_nil_exporter(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -478,7 +484,7 @@ func TestKiroku_Transaction_with_nil_exporter(t *testing.T) {
 	}
 	defer k.Close()
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -521,7 +527,8 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		wg: &wg,
 	}
 
-	if k, err = New("./test_data", "tester", exp, nil); err != nil {
+	opts := MakeOptions("./test_data", "tester")
+	if k, err = New(opts, exp); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -542,7 +549,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if k, err = New("test_data", "tester", exp, nil); err != nil {
+	if k, err = New(opts, exp); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -579,7 +586,8 @@ func TestKiroku_Transaction_on_closed(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -610,7 +618,8 @@ func TestKiroku_Snapshot(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -667,7 +676,8 @@ func TestKiroku_Snapshot_on_closed(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -694,7 +704,8 @@ func TestKiroku_Snapshot_with_error(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -729,8 +740,8 @@ func TestKiroku_rename_with_invalid_permissions(t *testing.T) {
 	}
 
 	var k Kiroku
-	k.name = "test"
-	k.dir = "test_data"
+	k.opts.Name = "test"
+	k.opts.Dir = "test_data"
 
 	unix := time.Now().UnixNano()
 	expectedErr := fmt.Errorf("rename %s test_data/test.merged.%d.moj: permission denied", "test_data/test.chunk.moj", unix)
@@ -753,15 +764,15 @@ func TestKiroku_exportAndRemove_with_invalid_permissions(t *testing.T) {
 	defer os.RemoveAll("./test_data")
 
 	var k Kiroku
-	k.name = "test"
-	k.dir = "test_data"
+	k.opts.Name = "test"
+	k.opts.Dir = "test_data"
 
-	if k.c, err = NewWriter(k.dir, k.name); err != nil {
+	if k.c, err = NewWriter(k.opts.Dir, k.opts.Name); err != nil {
 		t.Fatal(err)
 	}
 
 	var chunk *Writer
-	if chunk, err = NewWriter(k.dir, k.name+".chunk"); err != nil {
+	if chunk, err = NewWriter(k.opts.Dir, k.opts.Name+".chunk"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -819,7 +830,8 @@ func TestKiroku_sleep(t *testing.T) {
 
 func ExampleNew() {
 	var err error
-	if testKiroku, err = New("./test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("./test_data", "tester")
+	if testKiroku, err = New(opts, nil); err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -833,7 +845,8 @@ func ExampleNew_with_custom_Exporter() {
 
 	// Utilize any Exporter, see https://github.com/mojura/sync-s3 for an example
 
-	if testKiroku, err = New("./test_data", "tester", e, nil); err != nil {
+	opts := MakeOptions("./test_data", "tester")
+	if testKiroku, err = New(opts, e); err != nil {
 		log.Fatal(err)
 		return
 	}

@@ -16,7 +16,8 @@ func TestSnapshot_Write(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()

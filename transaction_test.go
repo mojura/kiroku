@@ -16,8 +16,8 @@ func TestTransaction_SetIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./test_data")
-
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -50,7 +50,8 @@ func TestTransaction_GetIndex(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -87,7 +88,8 @@ func TestTransaction_NextIndex(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()
@@ -122,7 +124,8 @@ func TestTransaction_AddBlock(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if k, err = New("test_data", "tester", nil, nil); err != nil {
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer k.Close()

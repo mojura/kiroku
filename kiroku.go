@@ -18,23 +18,23 @@ const errBreak = errors.Error("break")
 
 // New will initialize a new Kiroku instance
 // Note: Processor and Options are optional
-func New(dir, name string, e Exporter, o *Options) (kp *Kiroku, err error) {
+func New(o Options, e Exporter) (kp *Kiroku, err error) {
 	// Call NewWithContext with a background context
-	return NewWithContext(context.Background(), dir, name, e, o)
+	return NewWithContext(context.Background(), o, e)
 }
 
 // NewWithContext will initialize a new Kiroku instance with a provided context.Context
 // Note: Processor and Options are optional
-func NewWithContext(ctx context.Context, dir, name string, e Exporter, o *Options) (kp *Kiroku, err error) {
+func NewWithContext(ctx context.Context, o Options, e Exporter) (kp *Kiroku, err error) {
 	var k Kiroku
 	// Set output prefix
-	prefix := fmt.Sprintf("Kiroku (%v)", name)
+	prefix := fmt.Sprintf("Kiroku (%v)", o.Name)
 	// Initialize Kiroku output
 	k.out = scribe.New(prefix)
+	// Set options
+	k.opts = o
 	// Set directory as a cleaned version of the provided directory
-	k.dir = filepath.Clean(dir)
-	// Set name as the provided name
-	k.name = name
+	k.opts.Dir = filepath.Clean(k.opts.Dir)
 	// Initialize cancel context with the provided context as the parent
 	k.ctx, k.cancelFn = context.WithCancel(ctx)
 	// Set exporter
@@ -44,14 +44,8 @@ func NewWithContext(ctx context.Context, dir, name string, e Exporter, o *Option
 	k.ms = make(semaphore, 1)
 	k.es = make(semaphore, 1)
 
-	// Check to see if options were provided
-	if o != nil {
-		// Options were provided, set Kiroku options as the provided options value
-		k.opts = *o
-	}
-
 	// Initialize primary Chunk
-	if k.c, err = NewWriter(dir, name); err != nil {
+	if k.c, err = NewWriter(k.opts.Dir, k.opts.Name); err != nil {
 		err = fmt.Errorf("error initializing primary chunk: %v", err)
 		return
 	}
@@ -109,11 +103,6 @@ type Kiroku struct {
 
 	// Exporter
 	e Exporter
-
-	// Directory to store chunks
-	dir string
-	// Name of service
-	name string
 }
 
 // Meta will return a copy of the current Meta
@@ -253,7 +242,7 @@ func (k *Kiroku) getTruncatedName(filename string) (name string) {
 	// is a note to do some discovery around this. The outcome should be one of two:
 	//	1. Comment as to why this approach was used
 	//	2. Use path.Base
-	return strings.Replace(filename, k.dir+"/", "", 1)
+	return strings.Replace(filename, k.opts.Dir+"/", "", 1)
 }
 
 func (k *Kiroku) getNext(targetPrefix string) (filename string, ok bool, err error) {
@@ -272,7 +261,7 @@ func (k *Kiroku) getNext(targetPrefix string) (filename string, ok bool, err err
 	}
 
 	// Iterate through files within directory
-	err = walk(k.dir, fn)
+	err = walk(k.opts.Dir, fn)
 	return
 }
 
@@ -298,7 +287,7 @@ func (k *Kiroku) getLast(targetPrefix string) (filename string, ok bool, err err
 	}
 
 	// Iterate through files within directory
-	err = walk(k.dir, fn)
+	err = walk(k.opts.Dir, fn)
 	return
 }
 
@@ -312,7 +301,7 @@ func (k *Kiroku) isWriterMatch(targetPrefix, filename string, info os.FileInfo) 
 	name := k.getTruncatedName(filename)
 
 	// Check to see if filename has the needed prefix
-	if !strings.HasPrefix(name, k.name+"."+targetPrefix) {
+	if !strings.HasPrefix(name, k.opts.Name+"."+targetPrefix) {
 		// We do not have a service match, return
 		return
 	}
@@ -340,9 +329,9 @@ func (k *Kiroku) sleep(d time.Duration) {
 
 func (k *Kiroku) rename(filename, targetPrefix string, unix int64) (err error) {
 	// Set the new name
-	newName := fmt.Sprintf("%s.%s.%d.moj", k.name, targetPrefix, unix)
+	newName := fmt.Sprintf("%s.%s.%d.moj", k.opts.Name, targetPrefix, unix)
 	// Set filename as directory and name joined
-	newFilename := path.Join(k.dir, newName)
+	newFilename := path.Join(k.opts.Dir, newName)
 
 	// Rename original filename as new filename
 	if err = os.Rename(filename, newFilename); err != nil {
@@ -448,7 +437,7 @@ func (k *Kiroku) export(filename string) (err error) {
 	if err = Read(filename, func(r *Reader) (err error) {
 		// Create the export filename using the service name and the created at value
 		// of the current chunk.
-		exportFilename := generateFilename(k.name, r.Meta().CreatedAt)
+		exportFilename := generateFilename(k.opts.Name, r.Meta().CreatedAt)
 		// Get underlying io.ReadSeeker from Reader
 		rs := r.ReadSeeker()
 		// Seek to beginning of the file
@@ -506,11 +495,11 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 	// Get Unix nano value from timestamp
 	unix := now.UnixNano()
 	// Set name of chunk with temporary prefix
-	name := fmt.Sprintf("%s.tmp.chunk.%d", k.name, unix)
+	name := fmt.Sprintf("%s.tmp.chunk.%d", k.opts.Name, unix)
 
 	var w *Writer
 	// Initialize a new chunk Writer
-	if w, err = newWriter(k.dir, name); err != nil {
+	if w, err = newWriter(k.opts.Dir, name); err != nil {
 		return
 	}
 
