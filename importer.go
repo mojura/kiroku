@@ -7,5 +7,6 @@ import (
 
 // Importer is used for importing
 type Importer interface {
-	ImportNext(ctx context.Context, prefix, lastFilename string, w io.WriterAt) (filename string, err error)
+	GetNext(ctx context.Context, prefix, lastFilename string) (filename string, err error)
+	Import(ctx context.Context, filename string, w io.Writer) (err error)
 }
