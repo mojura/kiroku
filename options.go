@@ -26,6 +26,7 @@ type Options struct {
 	AvoidExportOnClose bool
 }
 
+// Validate ensures that the Options have all the required fields set
 func (o *Options) Validate() (err error) {
 	var errs errors.ErrorList
 	if len(o.Dir) == 0 {

@@ -36,6 +36,7 @@ func (m *MirrorOptions) fill() {
 	}
 }
 
+// Validate ensures that the MirrorOptions have all the required fields set
 func (m *MirrorOptions) Validate() (err error) {
 	var errs errors.ErrorList
 	m.fill()
