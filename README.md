@@ -1,4 +1,4 @@
-# Kiroku [![GoDoc](https://godoc.org/github.com/mojura/kiroku?status.svg)](https://godoc.org/github.com/mojura/kiroku) ![Status](https://img.shields.io/badge/status-beta-yellow.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/mojura/kiroku)](https://goreportcard.com/report/github.com/mojura/kiroku)
+# Kiroku [![GoDoc](https://godoc.org/github.com/mojura/kiroku?status.svg)](https://godoc.org/github.com/mojura/kiroku) ![Status](https://img.shields.io/badge/status-beta-yellow.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/mojura/kiroku)](https://goreportcard.com/report/github.com/mojura/kiroku) ![Go Test Coverage](https://img.shields.io/badge/coverage-93.6%25-green)
 Kiroku is a general purpose historical record system which utilizes data blocks. It was built to be used as the action persistence layer for Mojura.
 
 ## Usage
