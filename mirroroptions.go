@@ -15,7 +15,6 @@ const (
 func MakeMirrorOptions(dir, name string, onImport Processor) (o MirrorOptions) {
 	o.Dir = dir
 	o.Name = name
-	o.OnImport = onImport
 	return
 }
 
@@ -23,8 +22,6 @@ func MakeMirrorOptions(dir, name string, onImport Processor) (o MirrorOptions) {
 type MirrorOptions struct {
 	Options
 
-	// OnImport will be called whenever an imported value is merged into the primary Chunk
-	OnImport Processor
 	// EndOfResultsDelay represents the amount of time to wait before pulling "Next" after receiving empty results
 	// Note: Default is 10 seconds
 	EndOfResultsDelay time.Duration
