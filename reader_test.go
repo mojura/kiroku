@@ -193,7 +193,49 @@ func TestReader_ForEach(t *testing.T) {
 		return
 	}
 
-	if err = testForEach(r, tcs[:]); err != nil {
+	if _, err = testForEach(r, tcs[:], 0); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReader_ForEach_with_active_writes(t *testing.T) {
+	var (
+		c   *Writer
+		err error
+	)
+
+	tcs := readerTestcases
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	if c, err = NewWriter("./test_data", "testie"); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if err = populateReaderTestcase(c, tcs[:2]); err != nil {
+		t.Fatal(err)
+	}
+
+	var r *Reader
+	if r, err = NewReader(c.f); err != nil {
+		t.Fatalf("error initializing reader: %v", err)
+		return
+	}
+
+	var lastPosition int64
+	if lastPosition, err = testForEach(r, tcs[:2], 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = populateReaderTestcase(c, tcs[2:]); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = testForEach(r, tcs[2:], lastPosition); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -232,7 +274,7 @@ func TestReader_ForEach_with_seek_error(t *testing.T) {
 
 	expectedErr := fmt.Errorf("error seeking to first block byte: seek %s: file already closed", c.filename)
 
-	err = r.ForEach(0, func(b *Block) (err error) {
+	_, err = r.ForEach(0, func(b *Block) (err error) {
 		return
 	})
 
@@ -271,7 +313,7 @@ func TestReader_ForEach_with_processor_error(t *testing.T) {
 
 	expectedErr := errors.Error("foobar")
 
-	err = r.ForEach(0, func(b *Block) (err error) {
+	_, err = r.ForEach(0, func(b *Block) (err error) {
 		return expectedErr
 	})
 
@@ -316,7 +358,7 @@ func TestReader_Copy(t *testing.T) {
 		t.Fatalf("error initializing reader: %v", err)
 	}
 
-	if err = testForEach(cr, tcs[:]); err != nil {
+	if _, err = testForEach(cr, tcs[:], 0); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -453,7 +495,8 @@ func TestRead(t *testing.T) {
 			return
 		}
 
-		return testForEach(r, tcs[:])
+		_, err = testForEach(r, tcs[:], 0)
+		return
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -527,13 +570,19 @@ func ExampleReader_Meta() {
 }
 
 func ExampleReader_ForEach() {
-	var err error
-	if err = testReader.ForEach(0, func(b *Block) (err error) {
+	var (
+		lastPosition int64
+		err          error
+	)
+
+	if lastPosition, err = testReader.ForEach(0, func(b *Block) (err error) {
 		fmt.Println("Block value:", string(b.Value))
 		return
 	}); err != nil {
 		log.Fatalf("Error iterating through blocks: %v", err)
 	}
+
+	fmt.Println("Last read block at", lastPosition)
 }
 
 func ExampleReader_Copy() {
@@ -576,7 +625,7 @@ func ExampleRead() {
 		m := testReader.Meta()
 		fmt.Println("Meta!", m)
 
-		if err = r.ForEach(0, func(b *Block) (err error) {
+		if _, err = r.ForEach(0, func(b *Block) (err error) {
 			fmt.Println("Block value:", string(b.Value))
 			return
 		}); err != nil {
@@ -603,30 +652,25 @@ func testMeta(r *Reader, tcs []readerTestcase) (err error) {
 	return
 }
 
-func testForEach(r *Reader, tcs []readerTestcase) (err error) {
-	var lastBlockSize int64
-	for i := 0; i < len(tcs); i++ {
-		var count int
-		if err = r.ForEach(lastBlockSize, func(b *Block) (err error) {
-			tc := tcs[count+i]
-			if str := string(b.Value); str != tc.value {
-				err = fmt.Errorf("invalid data, expected <%s> and received <%s>", tc.value, str)
-				return
-			}
-
-			count++
-			return
-		}); err != nil {
-			err = fmt.Errorf("error during iteration: %v", err)
+func testForEach(r *Reader, tcs []readerTestcase, seek int64) (lastPosition int64, err error) {
+	var count int
+	if lastPosition, err = r.ForEach(seek, func(b *Block) (err error) {
+		tc := tcs[count]
+		if str := string(b.Value); str != tc.value {
+			err = fmt.Errorf("invalid data, expected <%s> and received <%s>", tc.value, str)
 			return
 		}
 
-		if expectedTotal := len(tcs) - i; count != expectedTotal {
-			err = fmt.Errorf("invalid number of iterations, expected %d and received %d", expectedTotal, count)
-			return
-		}
+		count++
+		return
+	}); err != nil {
+		err = fmt.Errorf("error during iteration: %v", err)
+		return
+	}
 
-		lastBlockSize = tcs[i].lastBlockSize
+	if expectedTotal := len(tcs); count != expectedTotal {
+		err = fmt.Errorf("invalid number of iterations, expected %d and received %d", expectedTotal, count)
+		return
 	}
 
 	return

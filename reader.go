@@ -54,9 +54,13 @@ func (r *Reader) Meta() Meta {
 }
 
 // ForEach will iterate through all the blocks within the reader
-func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
+func (r *Reader) ForEach(seek int64, fn func(*Block) error) (lastPosition int64, err error) {
+	if seek == 0 {
+		seek = metaSize
+	}
+
 	// Seek to the first block byte
-	if _, err = r.r.Seek(metaSize+seek, 0); err != nil {
+	if _, err = r.r.Seek(seek, 0); err != nil {
 		err = fmt.Errorf("error seeking to first block byte: %v", err)
 		return
 	}
@@ -80,9 +84,18 @@ func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
 		}
 	}
 
-	if err == io.EOF {
-		// Error was io.EOF, set to nil
-		err = nil
+	switch err {
+	case nil:
+	case io.EOF:
+
+	default:
+		return
+	}
+
+	// Get current seek position
+	if lastPosition, err = r.r.Seek(0, os.SEEK_CUR); err != nil {
+		err = fmt.Errorf("error getting last position: %v", err)
+		return
 	}
 
 	return
