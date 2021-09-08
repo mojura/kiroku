@@ -2,6 +2,7 @@ package kiroku
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -31,4 +32,19 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 
 func generateFilename(name string, unixNano int64) string {
 	return fmt.Sprintf("%s.%d.moj", name, unixNano)
+}
+
+func removeFile(f fs.File, dir string) (err error) {
+	var info fs.FileInfo
+	if info, err = f.Stat(); err != nil {
+		return
+	}
+
+	filename := filepath.Join(dir, info.Name())
+
+	if err = f.Close(); err != nil {
+		return
+	}
+
+	return os.Remove(filename)
 }

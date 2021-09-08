@@ -2,8 +2,11 @@ package kiroku
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"testing"
+
+	"github.com/hatchify/errors"
 )
 
 func Test_walk(t *testing.T) {
@@ -64,3 +67,69 @@ func Test_walk_files_removed_mid_iteration(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func Test_removeFile(t *testing.T) {
+	var err error
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	var f *os.File
+	if f, err = os.Create("./test_data/test"); err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	if err = removeFile(f, "./test_data"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = removeFile(f, "./test_data"); err == nil {
+		t.Fatal("expected error and received nil")
+	}
+}
+
+func Test_removeFile_with_close_error(t *testing.T) {
+	var err error
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	var f *os.File
+	if f, err = os.Create("./test_data/test"); err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	mf := mockFile{
+		stat: func() (fs.FileInfo, error) {
+			return f.Stat()
+		},
+		read: func(bs []byte) (int, error) {
+			return f.Read(bs)
+		},
+		close: func() error { return errors.New("foobar") },
+	}
+
+	err = removeFile(&mf, "./test_data")
+	switch {
+	case err == nil:
+		t.Fatalf("invalid error, expected <foobar> and received nil")
+	case err.Error() != "foobar":
+		t.Fatalf("invalid error, expected <%s> and received <%s>", "foobar", err.Error())
+	}
+}
+
+type mockFile struct {
+	stat  func() (fs.FileInfo, error)
+	read  func([]byte) (int, error)
+	close func() error
+}
+
+func (m *mockFile) Stat() (fs.FileInfo, error) { return m.stat() }
+
+func (m *mockFile) Read(bs []byte) (int, error) { return m.read(bs) }
+
+func (m *mockFile) Close() error { return m.close() }
