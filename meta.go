@@ -42,17 +42,17 @@ func newMetaFromReader(r io.ReadSeeker) (m Meta, err error) {
 // Meta represents the historical meta data
 type Meta struct {
 	// CurrentIndex would be the current index count
-	CurrentIndex uint64
+	CurrentIndex uint64 `json:"currentIndex"`
 
 	// BlockCount is the number of blocks contained within the Chunk
-	BlockCount int64
+	BlockCount int64 `json:"blockCount"`
 	// TotalBlockSize is the total block size (in bytes)
-	TotalBlockSize int64
+	TotalBlockSize int64 `json:"totalBlockSize"`
 
 	// LastSnapshotAt is the timestamp of the last snapshot as Unix Nano
-	LastSnapshotAt int64
+	LastSnapshotAt int64 `json:"lastSnapshotAt"`
 	// CreatedAt is a UnixNano timestamp of when the last chunk was created
-	CreatedAt int64
+	CreatedAt int64 `json:"createdAt"`
 }
 
 func (m *Meta) merge(in *Meta) {
