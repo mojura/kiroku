@@ -98,6 +98,32 @@ func Test_NewWriterWithFile(t *testing.T) {
 	}
 }
 
+func TestWriter_Meta(t *testing.T) {
+	var err error
+	if err = os.Mkdir("./test_data", 0744); err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer os.RemoveAll("./test_data")
+
+	var w *Writer
+	if w, err = NewWriter("./test_data", "test"); err != nil {
+		t.Fatal(err)
+	}
+	defer w.Close()
+
+	for i := 0; i < 100; i++ {
+		if err = w.AddBlock(TypeWriteAction, []byte("foo"), []byte("bar")); err != nil {
+			t.Fatal(err)
+		}
+
+		meta := w.Meta()
+		if meta.BlockCount != int64(i)+1 {
+			t.Fatalf("invalid block count, expected %d and received %d", i, meta.BlockCount)
+		}
+	}
+}
+
 func TestWriter_GetIndex(t *testing.T) {
 	testSetIndexGetIndex(t)
 }
