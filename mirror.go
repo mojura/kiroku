@@ -2,6 +2,7 @@ package kiroku
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -62,6 +63,14 @@ func (m *Mirror) Meta() (meta Meta, err error) {
 // Filename returns the filename of the primary chunk
 func (m *Mirror) Filename() (filename string, err error) {
 	return m.k.Filename()
+}
+
+func (m *Mirror) Transaction(fn func(*Transaction) error) (err error) {
+	return errors.New("mirrors cannot perform transactions")
+}
+
+func (m *Mirror) Snapshot(fn func(*Snapshot) error) (err error) {
+	return errors.New("mirrors cannot perform snapshots")
 }
 
 // Close will close the selected instance of Kiroku
