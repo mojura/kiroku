@@ -70,7 +70,7 @@ func TestNewMirror(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		opts := MakeMirrorOptions(tc.dir, tc.name, nil)
+		opts := MakeOptions(tc.dir, tc.name)
 		m, err = NewMirror(opts, tc.importer)
 		if err = compareErrors(tc.expectedError, err); err != nil {
 			t.Fatal(err)
@@ -99,7 +99,7 @@ func TestMirror_Filename(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./test_data")
-	opts := MakeMirrorOptions("test_data", "tester", nil)
+	opts := MakeOptions("test_data", "tester")
 	if m, err = NewMirror(opts, newErrorImporter(io.EOF)); err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestMirror_Meta(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./test_data")
-	opts := MakeMirrorOptions("test_data", "tester", nil)
+	opts := MakeOptions("test_data", "tester")
 	if m, err = NewMirror(opts, newErrorImporter(io.EOF)); err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestMirror_Close(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	opts := MakeMirrorOptions("test_data", "test", nil)
+	opts := MakeOptions("test_data", "test")
 	if m, err = NewMirror(opts, newErrorImporter(io.EOF)); err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestMirror_Close(t *testing.T) {
 
 func ExampleNewMirror() {
 	var err error
-	opts := MakeMirrorOptions("./test_data", "tester", nil)
+	opts := MakeOptions("./test_data", "tester")
 	if testMirror, err = NewMirror(opts, newErrorImporter(io.EOF)); err != nil {
 		log.Fatal(err)
 		return

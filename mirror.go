@@ -14,15 +14,15 @@ import (
 )
 
 // NewMirror will initialize a new Mirror instance
-func NewMirror(opts MirrorOptions, i Importer) (mp *Mirror, err error) {
+func NewMirror(opts Options, i Importer) (mp *Mirror, err error) {
 	// Call NewMirrorWithContext with a background context
 	return NewMirrorWithContext(context.Background(), opts, i)
 }
 
 // NewMirrorWithContext will initialize a new Mirror instance with a provided context.Context
-func NewMirrorWithContext(ctx context.Context, opts MirrorOptions, i Importer) (mp *Mirror, err error) {
+func NewMirrorWithContext(ctx context.Context, opts Options, i Importer) (mp *Mirror, err error) {
 	var m Mirror
-	if m.k, err = NewWithContext(ctx, opts.Options, nil); err != nil {
+	if m.k, err = NewWithContext(ctx, opts, nil); err != nil {
 		return
 	}
 
@@ -46,7 +46,7 @@ type Mirror struct {
 	i  Importer
 	ch chan struct{}
 
-	opts MirrorOptions
+	opts Options
 
 	swg sync.WaitGroup
 }
@@ -125,7 +125,7 @@ func (m *Mirror) update(lastFile string) (filename string, err error) {
 	switch err {
 	case nil:
 	case io.EOF:
-		err = m.sleep(time.Second * 10)
+		err = m.sleep(m.opts.EndOfResultsDelay)
 		return
 
 	default:
