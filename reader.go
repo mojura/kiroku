@@ -9,13 +9,13 @@ import (
 )
 
 // NewReader will initialize a new chunk reader
-func NewReader(rs io.ReadSeeker) (rp *Reader, err error) {
+func NewReader(f File) (rp *Reader, err error) {
 	var r Reader
-	if r.m, err = newMetaFromReader(rs); err != nil {
+	if r.m, err = newMetaFromReader(f); err != nil {
 		return
 	}
 
-	r.r = rs
+	r.r = io.NewSectionReader(f, 0, r.m.TotalBlockSize+metaSize)
 	rp = &r
 	return
 }
