@@ -282,7 +282,7 @@ func TestReader_ForEach_with_seek_error(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedErr := fmt.Errorf("error seeking to first block byte: seek %s: file already closed", c.filename)
+	expectedErr := fmt.Errorf("read %s: file already closed", c.filename)
 
 	_, err = r.ForEach(0, func(b *Block) (err error) {
 		return
@@ -405,7 +405,7 @@ func TestReader_Copy_with_seek_error(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedErr := fmt.Errorf("error seeking to first meta byte: seek %s: file already closed", c.filename)
+	expectedErr := fmt.Errorf("read %s: file already closed", c.filename)
 
 	_, err = r.Copy(bytes.NewBuffer(nil))
 
