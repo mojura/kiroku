@@ -284,7 +284,7 @@ func TestReader_ForEach_with_seek_error(t *testing.T) {
 
 	expectedErr := fmt.Errorf("read %s: file already closed", c.filename)
 
-	_, err = r.ForEach(0, func(b *Block) (err error) {
+	err = r.ForEach(0, func(b *Block) (err error) {
 		return
 	})
 
@@ -323,7 +323,7 @@ func TestReader_ForEach_with_processor_error(t *testing.T) {
 
 	expectedErr := errors.Error("foobar")
 
-	_, err = r.ForEach(0, func(b *Block) (err error) {
+	err = r.ForEach(0, func(b *Block) (err error) {
 		return expectedErr
 	})
 
@@ -580,19 +580,13 @@ func ExampleReader_Meta() {
 }
 
 func ExampleReader_ForEach() {
-	var (
-		lastPosition int64
-		err          error
-	)
-
-	if lastPosition, err = testReader.ForEach(0, func(b *Block) (err error) {
+	var err error
+	if err = testReader.ForEach(0, func(b *Block) (err error) {
 		fmt.Println("Block value:", string(b.Value))
 		return
 	}); err != nil {
 		log.Fatalf("Error iterating through blocks: %v", err)
 	}
-
-	fmt.Println("Last read block at", lastPosition)
 }
 
 func ExampleReader_Copy() {
@@ -635,7 +629,7 @@ func ExampleRead() {
 		m := testReader.Meta()
 		fmt.Println("Meta!", m)
 
-		if _, err = r.ForEach(0, func(b *Block) (err error) {
+		if err = r.ForEach(0, func(b *Block) (err error) {
 			fmt.Println("Block value:", string(b.Value))
 			return
 		}); err != nil {
@@ -664,7 +658,7 @@ func testMeta(r *Reader, tcs []readerTestcase) (err error) {
 
 func testForEach(r *Reader, tcs []readerTestcase, seek int64) (lastPosition int64, err error) {
 	var count int
-	if lastPosition, err = r.ForEach(seek, func(b *Block) (err error) {
+	if err = r.ForEach(seek, func(b *Block) (err error) {
 		tc := tcs[count]
 		if str := string(b.Key); str != tc.key {
 			err = fmt.Errorf("invalid key, expected <%s> and received <%s>", tc.key, str)

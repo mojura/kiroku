@@ -54,7 +54,7 @@ func (r *Reader) Meta() Meta {
 }
 
 // ForEach will iterate through all the blocks within the reader
-func (r *Reader) ForEach(seek int64, fn func(*Block) error) (lastPosition int64, err error) {
+func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
 	seek += metaSize
 
 	// Seek to the first block byte
@@ -84,19 +84,13 @@ func (r *Reader) ForEach(seek int64, fn func(*Block) error) (lastPosition int64,
 
 	switch err {
 	case nil:
+		return nil
 	case io.EOF:
+		return nil
 
 	default:
 		return
 	}
-
-	// Get current seek position
-	if lastPosition, err = r.r.Seek(0, os.SEEK_CUR); err != nil {
-		err = fmt.Errorf("error getting last position: %v", err)
-		return
-	}
-
-	return
 }
 
 // Copy will copy the entire chunk (meta + blocks)
