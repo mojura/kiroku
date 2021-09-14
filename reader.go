@@ -9,13 +9,13 @@ import (
 )
 
 // NewReader will initialize a new chunk reader
-func NewReader(rs io.ReadSeeker) (rp *Reader, err error) {
+func NewReader(f File) (rp *Reader, err error) {
 	var r Reader
-	if r.m, err = newMetaFromReader(rs); err != nil {
+	if r.m, err = newMetaFromReader(f); err != nil {
 		return
 	}
 
-	r.r = rs
+	r.r = io.NewSectionReader(f, 0, r.m.TotalBlockSize+metaSize)
 	rp = &r
 	return
 }
@@ -54,10 +54,8 @@ func (r *Reader) Meta() Meta {
 }
 
 // ForEach will iterate through all the blocks within the reader
-func (r *Reader) ForEach(seek int64, fn func(*Block) error) (lastPosition int64, err error) {
-	if seek == 0 {
-		seek = metaSize
-	}
+func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
+	seek += metaSize
 
 	// Seek to the first block byte
 	if _, err = r.r.Seek(seek, 0); err != nil {
@@ -86,19 +84,13 @@ func (r *Reader) ForEach(seek int64, fn func(*Block) error) (lastPosition int64,
 
 	switch err {
 	case nil:
+		return nil
 	case io.EOF:
+		return nil
 
 	default:
 		return
 	}
-
-	// Get current seek position
-	if lastPosition, err = r.r.Seek(0, os.SEEK_CUR); err != nil {
-		err = fmt.Errorf("error getting last position: %v", err)
-		return
-	}
-
-	return
 }
 
 // Copy will copy the entire chunk (meta + blocks)

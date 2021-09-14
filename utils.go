@@ -2,6 +2,7 @@ package kiroku
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -47,4 +48,10 @@ func removeFile(f fs.File, dir string) (err error) {
 	}
 
 	return os.Remove(filename)
+}
+
+type File interface {
+	io.Seeker
+	io.Reader
+	io.ReaderAt
 }
