@@ -18,14 +18,14 @@ const errBreak = errors.Error("break")
 
 // New will initialize a new Kiroku instance
 // Note: Processor and Options are optional
-func New(o Options, e Exporter) (kp *Kiroku, err error) {
+func New(o Options, src Source) (kp *Kiroku, err error) {
 	// Call NewWithContext with a background context
-	return NewWithContext(context.Background(), o, e)
+	return NewWithContext(context.Background(), o, src)
 }
 
 // NewWithContext will initialize a new Kiroku instance with a provided context.Context
 // Note: Processor and Options are optional
-func NewWithContext(ctx context.Context, o Options, e Exporter) (kp *Kiroku, err error) {
+func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err error) {
 	var k Kiroku
 	// Set output prefix
 	prefix := fmt.Sprintf("Kiroku (%v)", o.Name)
@@ -39,7 +39,7 @@ func NewWithContext(ctx context.Context, o Options, e Exporter) (kp *Kiroku, err
 	k.ctx, k.cancelFn = context.WithCancel(ctx)
 	// Set exporter
 	// Note: This field is optional and might be nil
-	k.e = e
+	k.src = src
 	// Initialize semaphores
 	k.ms = make(semaphore, 1)
 	k.es = make(semaphore, 1)
@@ -101,8 +101,7 @@ type Kiroku struct {
 	// Context cancel func
 	cancelFn func()
 
-	// Exporter
-	e Exporter
+	src Source
 }
 
 // Meta will return a copy of the current Meta
@@ -428,7 +427,7 @@ func (k *Kiroku) merge(filename string) (err error) {
 }
 
 func (k *Kiroku) export(filename string) (err error) {
-	if k.e == nil {
+	if k.src == nil {
 		// Exporter not set, return
 		return
 	}
@@ -446,7 +445,7 @@ func (k *Kiroku) export(filename string) (err error) {
 		}
 
 		// Export file
-		return k.e.Export(exportFilename, rs)
+		return k.src.Export(exportFilename, rs)
 	}); err != nil {
 		err = fmt.Errorf("error encountered while exporting: %v", err)
 		return

@@ -14,13 +14,13 @@ import (
 )
 
 // NewMirror will initialize a new Mirror instance
-func NewMirror(opts Options, i Importer) (mp *Mirror, err error) {
+func NewMirror(opts Options, src Source) (mp *Mirror, err error) {
 	// Call NewMirrorWithContext with a background context
-	return NewMirrorWithContext(context.Background(), opts, i)
+	return NewMirrorWithContext(context.Background(), opts, src)
 }
 
 // NewMirrorWithContext will initialize a new Mirror instance with a provided context.Context
-func NewMirrorWithContext(ctx context.Context, opts Options, i Importer) (mp *Mirror, err error) {
+func NewMirrorWithContext(ctx context.Context, opts Options, src Source) (mp *Mirror, err error) {
 	var m Mirror
 	if m.k, err = NewWithContext(ctx, opts, nil); err != nil {
 		return
@@ -28,7 +28,7 @@ func NewMirrorWithContext(ctx context.Context, opts Options, i Importer) (mp *Mi
 
 	scribePrefix := fmt.Sprintf("Kiroku [%s] (Mirror)", opts.Name)
 	m.out = scribe.New(scribePrefix)
-	m.i = i
+	m.src = src
 	m.opts = opts
 	m.ch = make(chan struct{}, 1)
 	m.swg.Add(1)
@@ -42,9 +42,9 @@ func NewMirrorWithContext(ctx context.Context, opts Options, i Importer) (mp *Mi
 type Mirror struct {
 	out *scribe.Scribe
 
-	k  *Kiroku
-	i  Importer
-	ch chan struct{}
+	k   *Kiroku
+	src Source
+	ch  chan struct{}
 
 	opts Options
 
@@ -121,7 +121,7 @@ func (m *Mirror) getLastFile() (lastFile string, err error) {
 
 func (m *Mirror) update(lastFile string) (filename string, err error) {
 	prefix := m.k.opts.Name + "."
-	filename, err = m.i.GetNext(m.k.ctx, prefix, lastFile)
+	filename, err = m.src.GetNext(m.k.ctx, prefix, lastFile)
 	switch err {
 	case nil:
 	case io.EOF:
@@ -160,7 +160,7 @@ func (m *Mirror) downloadNext(filename string) (f *os.File, err error) {
 	}
 
 	// TODO: Polish this all up
-	if err = m.i.Import(m.k.ctx, filename, f); err != nil {
+	if err = m.src.Import(m.k.ctx, filename, f); err != nil {
 		err = fmt.Errorf("error downloading from source: %v", err)
 		return
 	}

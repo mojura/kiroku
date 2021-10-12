@@ -664,14 +664,15 @@ func TestWriter_Merge_with_reader_error(t *testing.T) {
 
 	targetErr := fmt.Errorf("error encountered while copying source blocks: error seeking to first block byte: seek %s: file already closed", chunkFilename)
 	err = Read(chunkFilename, func(r *Reader) (err error) {
-		f, ok := (r.r).(*os.File)
-		if !ok {
-			return fmt.Errorf("unexpected type, exptected %T and received %T", f, r.r)
+		var f *os.File
+		if f, err = os.Open(chunkFilename); err != nil {
+			return
 		}
 
 		// Close file to induce error
 		f.Close()
-
+		// Replace reader with closed file
+		r.r = f
 		return w.Merge(r)
 	})
 

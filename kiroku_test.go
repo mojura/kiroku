@@ -197,10 +197,10 @@ func TestNew_with_invalid_exporting_chunk_permissions(t *testing.T) {
 	}
 
 	expectedErr := fmt.Errorf("error encountered while exporting: open %s: permission denied", "test_data/test.merged.moj")
-	exp := &testExporter{}
+	src := &testSource{}
 
 	opts := MakeOptions("test_data", "test")
-	if k, err = New(opts, exp); err != nil {
+	if k, err = New(opts, src); err != nil {
 		t.Fatal(err)
 	}
 
@@ -523,12 +523,12 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	exp := &testExporter{
+	src := &testSource{
 		wg: &wg,
 	}
 
 	opts := MakeOptions("./test_data", "tester")
-	if k, err = New(opts, exp); err != nil {
+	if k, err = New(opts, src); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -549,7 +549,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if k, err = New(opts, exp); err != nil {
+	if k, err = New(opts, src); err != nil {
 		t.Fatal(err)
 		return
 	}
@@ -839,14 +839,14 @@ func ExampleNew() {
 
 func ExampleNew_with_custom_Exporter() {
 	var (
-		e   Exporter
+		src Source
 		err error
 	)
 
-	// Utilize any Exporter, see https://github.com/mojura/sync-s3 for an example
+	// Utilize any Source, see https://github.com/mojura/sync-s3 for an example
 
 	opts := MakeOptions("./test_data", "tester")
-	if testKiroku, err = New(opts, e); err != nil {
+	if testKiroku, err = New(opts, src); err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -889,15 +889,23 @@ func ExampleKiroku_Snapshot() {
 	}
 }
 
-type testExporter struct {
+type testSource struct {
 	wg *sync.WaitGroup
 }
 
-func (e *testExporter) Export(filename string, r io.Reader) (err error) {
-	if e.wg == nil {
+func (s *testSource) Export(filename string, r io.Reader) (err error) {
+	if s.wg == nil {
 		return
 	}
 
-	e.wg.Done()
+	s.wg.Done()
+	return
+}
+
+func (s *testSource) Import(ctx context.Context, filename string, w io.Writer) (err error) {
+	return
+}
+
+func (s *testSource) GetNext(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
 	return
 }

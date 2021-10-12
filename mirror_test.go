@@ -1,7 +1,6 @@
 package kiroku
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -35,9 +34,9 @@ func TestNewMirror(t *testing.T) {
 	}
 
 	type testcase struct {
-		dir      string
-		name     string
-		importer Importer
+		dir  string
+		name string
+		src  Source
 
 		expectedError error
 	}
@@ -46,32 +45,32 @@ func TestNewMirror(t *testing.T) {
 		{
 			dir:           "test_data",
 			name:          "tester",
-			importer:      newErrorImporter(io.EOF),
+			src:           newErrorSource(io.EOF),
 			expectedError: nil,
 		},
 		{
 			dir:           "invalid_dir",
 			name:          "tester",
-			importer:      newErrorImporter(io.EOF),
+			src:           newErrorSource(io.EOF),
 			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: no such file or directory`, "invalid_dir/tester.moj"),
 		},
 		{
 			dir:           "test_data",
 			name:          "invalid_perms",
-			importer:      newErrorImporter(io.EOF),
+			src:           newErrorSource(io.EOF),
 			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: permission denied`, "test_data/invalid_perms.moj"),
 		},
 		{
 			dir:           "test_data",
 			name:          "tester",
-			importer:      newErrorImporter(errors.New("foobar")),
+			src:           newErrorSource(errors.New("foobar")),
 			expectedError: nil,
 		},
 	}
 
 	for _, tc := range tcs {
 		opts := MakeOptions(tc.dir, tc.name)
-		m, err = NewMirror(opts, tc.importer)
+		m, err = NewMirror(opts, tc.src)
 		if err = compareErrors(tc.expectedError, err); err != nil {
 			t.Fatal(err)
 		}
@@ -100,7 +99,7 @@ func TestMirror_Filename(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 	opts := MakeOptions("test_data", "tester")
-	if m, err = NewMirror(opts, newErrorImporter(io.EOF)); err != nil {
+	if m, err = NewMirror(opts, newErrorSource(io.EOF)); err != nil {
 		t.Fatal(err)
 	}
 	defer m.Close()
@@ -126,7 +125,7 @@ func TestMirror_Meta(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 	opts := MakeOptions("test_data", "tester")
-	if m, err = NewMirror(opts, newErrorImporter(io.EOF)); err != nil {
+	if m, err = NewMirror(opts, newErrorSource(io.EOF)); err != nil {
 		t.Fatal(err)
 	}
 	defer m.Close()
@@ -164,7 +163,7 @@ func TestMirror_Close(t *testing.T) {
 	defer os.RemoveAll("./test_data")
 
 	opts := MakeOptions("test_data", "test")
-	if m, err = NewMirror(opts, newErrorImporter(io.EOF)); err != nil {
+	if m, err = NewMirror(opts, newErrorSource(io.EOF)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -191,51 +190,8 @@ func TestMirror_Close(t *testing.T) {
 func ExampleNewMirror() {
 	var err error
 	opts := MakeOptions("./test_data", "tester")
-	if testMirror, err = NewMirror(opts, newErrorImporter(io.EOF)); err != nil {
+	if testMirror, err = NewMirror(opts, newErrorSource(io.EOF)); err != nil {
 		log.Fatal(err)
 		return
 	}
 }
-
-func newErrorImporter(err error) *errorImporter {
-	var e errorImporter
-	e.err = err
-	return &e
-}
-
-type errorImporter struct {
-	err error
-}
-
-func (e *errorImporter) GetNext(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
-	err = e.err
-	return
-}
-
-func (e *errorImporter) Import(ctx context.Context, filename string, w io.Writer) (err error) {
-	err = e.err
-	return
-}
-
-func newMockImporter(g getNextFn, i importFn) *mockImporter {
-	var m mockImporter
-	m.getNextFn = g
-	m.importFn = i
-	return &m
-}
-
-type mockImporter struct {
-	getNextFn getNextFn
-	importFn  importFn
-}
-
-func (m *mockImporter) GetNext(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
-	return m.getNextFn(ctx, prefix, lastFilename)
-}
-
-func (m *mockImporter) Import(ctx context.Context, filename string, w io.Writer) (err error) {
-	return m.importFn(ctx, filename, w)
-}
-
-type getNextFn func(ctx context.Context, prefix, lastFilename string) (filename string, err error)
-type importFn func(ctx context.Context, filename string, w io.Writer) (err error)
