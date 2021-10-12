@@ -15,7 +15,12 @@ func NewReader(f File) (rp *Reader, err error) {
 		return
 	}
 
-	r.r = io.NewSectionReader(f, 0, r.m.TotalBlockSize+metaSize)
+	var end int64
+	if end, err = r.getEnd(f); err != nil {
+		return
+	}
+
+	r.r = io.NewSectionReader(f, 0, end)
 	rp = &r
 	return
 }
@@ -120,4 +125,16 @@ func (r *Reader) CopyBlocks(destination io.Writer) (n int64, err error) {
 // ReadSeeker will return the Reader's underlying ReadSeeker
 func (r *Reader) ReadSeeker() io.ReadSeeker {
 	return r.r
+}
+
+func (r *Reader) getEnd(f File) (end int64, err error) {
+	if end, err = f.Seek(0, os.SEEK_END); err != nil {
+		return
+	}
+
+	if end > r.m.TotalBlockSize+metaSize {
+		end = r.m.TotalBlockSize + metaSize
+	}
+
+	return
 }
