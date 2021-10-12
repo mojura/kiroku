@@ -115,7 +115,7 @@ func (m *Mirror) getLastFile() (lastFile string, err error) {
 		return
 	}
 
-	lastFile = generateFilename(m.k.opts.Name, meta.CreatedAt)
+	lastFile = generateFilename(m.k.opts.Name, meta)
 	return
 }
 

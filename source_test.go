@@ -5,48 +5,59 @@ import (
 	"io"
 )
 
-func newMockSource(e exportFn, g getNextFn, i importFn) *mockSource {
+func newMockSource(e exportFn, i importFn, gn getNextFn, gl getLastSnapshotFn) *mockSource {
 	var m mockSource
-	m.getNextFn = g
+	m.exportFn = e
 	m.importFn = i
+	m.getNextFn = gn
+	m.getLastSnapshotFn = gl
 	return &m
 }
 
 type mockSource struct {
-	exportFn  exportFn
-	getNextFn getNextFn
-	importFn  importFn
+	exportFn          exportFn
+	importFn          importFn
+	getNextFn         getNextFn
+	getLastSnapshotFn getLastSnapshotFn
 }
 
-func (m *mockSource) Export(filename string, r io.Reader) error {
-	return m.exportFn(filename, r)
-}
-
-func (m *mockSource) GetNext(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
-	return m.getNextFn(ctx, prefix, lastFilename)
+func (m *mockSource) Export(ctx context.Context, filename string, r io.Reader) error {
+	return m.exportFn(ctx, filename, r)
 }
 
 func (m *mockSource) Import(ctx context.Context, filename string, w io.Writer) (err error) {
 	return m.importFn(ctx, filename, w)
 }
 
-type exportFn func(filename string, r io.Reader) error
-type getNextFn func(ctx context.Context, prefix, lastFilename string) (filename string, err error)
+func (m *mockSource) GetNext(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+	return m.getNextFn(ctx, prefix, lastFilename)
+}
+
+func (m *mockSource) GetLastSnapshot(ctx context.Context, prefix string) (filename string, err error) {
+	return m.getLastSnapshotFn(ctx, prefix)
+}
+
+type exportFn func(ctx context.Context, filename string, r io.Reader) error
 type importFn func(ctx context.Context, filename string, w io.Writer) (err error)
+type getNextFn func(ctx context.Context, prefix, lastFilename string) (filename string, err error)
+type getLastSnapshotFn func(ctx context.Context, prefix string) (filename string, err error)
 
 func newErrorSource(srcErr error) *mockSource {
-	e := func(filename string, r io.Reader) (err error) {
+	e := func(ctx context.Context, filename string, r io.Reader) (err error) {
 		return srcErr
-	}
-
-	g := func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
-		return "", srcErr
 	}
 
 	i := func(ctx context.Context, filename string, w io.Writer) (err error) {
-
 		return srcErr
 	}
 
-	return newMockSource(e, g, i)
+	gn := func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+		return "", srcErr
+	}
+
+	gl := func(ctx context.Context, prefix string) (filename string, err error) {
+		return "", srcErr
+	}
+
+	return newMockSource(e, i, gn, gl)
 }

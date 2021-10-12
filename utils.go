@@ -31,8 +31,14 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 	return
 }
 
-func generateFilename(name string, unixNano int64) string {
-	return fmt.Sprintf("%s.%d.moj", name, unixNano)
+func generateFilename(name string, m Meta) string {
+	kind := "chunk"
+	if m.LastSnapshotAt == m.CreatedAt {
+		kind = "snapshot"
+	}
+
+	return fmt.Sprintf("%s.%d.%s.moj", name, m.CreatedAt, kind)
+
 }
 
 func removeFile(f fs.File, dir string) (err error) {

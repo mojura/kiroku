@@ -436,7 +436,7 @@ func (k *Kiroku) export(filename string) (err error) {
 	if err = Read(filename, func(r *Reader) (err error) {
 		// Create the export filename using the service name and the created at value
 		// of the current chunk.
-		exportFilename := generateFilename(k.opts.Name, r.Meta().CreatedAt)
+		exportFilename := generateFilename(k.opts.Name, r.Meta())
 		// Get underlying io.ReadSeeker from Reader
 		rs := r.ReadSeeker()
 		// Seek to beginning of the file
@@ -445,7 +445,8 @@ func (k *Kiroku) export(filename string) (err error) {
 		}
 
 		// Export file
-		return k.src.Export(exportFilename, rs)
+		// TODO: Utilize a kiroku-level context and pass it here
+		return k.src.Export(context.Background(), exportFilename, rs)
 	}); err != nil {
 		err = fmt.Errorf("error encountered while exporting: %v", err)
 		return

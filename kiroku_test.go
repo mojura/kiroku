@@ -197,8 +197,11 @@ func TestNew_with_invalid_exporting_chunk_permissions(t *testing.T) {
 	}
 
 	expectedErr := fmt.Errorf("error encountered while exporting: open %s: permission denied", "test_data/test.merged.moj")
-	src := &testSource{}
+	efn := func(ctx context.Context, filename string, r io.Reader) (err error) {
+		return
+	}
 
+	src := newMockSource(efn, nil, nil, nil)
 	opts := MakeOptions("test_data", "test")
 	if k, err = New(opts, src); err != nil {
 		t.Fatal(err)
@@ -523,9 +526,12 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	src := &testSource{
-		wg: &wg,
+	efn := func(ctx context.Context, filename string, r io.Reader) (err error) {
+		wg.Done()
+		return
 	}
+
+	src := newMockSource(efn, nil, nil, nil)
 
 	opts := MakeOptions("./test_data", "tester")
 	if k, err = New(opts, src); err != nil {
@@ -887,25 +893,4 @@ func ExampleKiroku_Snapshot() {
 		log.Fatal(err)
 		return
 	}
-}
-
-type testSource struct {
-	wg *sync.WaitGroup
-}
-
-func (s *testSource) Export(filename string, r io.Reader) (err error) {
-	if s.wg == nil {
-		return
-	}
-
-	s.wg.Done()
-	return
-}
-
-func (s *testSource) Import(ctx context.Context, filename string, w io.Writer) (err error) {
-	return
-}
-
-func (s *testSource) GetNext(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
-	return
 }
