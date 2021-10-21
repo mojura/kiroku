@@ -6,7 +6,10 @@ import (
 	"unsafe"
 )
 
-var metaSize = int64(unsafe.Sizeof(Meta{}))
+var (
+	emptyMeta Meta
+	metaSize  = int64(unsafe.Sizeof(Meta{}))
+)
 
 func newMetaFromBytes(bs []byte) *Meta {
 	// Associate meta with provided bytes
@@ -68,4 +71,40 @@ func (m *Meta) merge(in *Meta) {
 
 	// Set the underlying Meta as the dereferenced value of the inbound Meta
 	*m = mm
+}
+
+func (m *Meta) getKind() string {
+	if m.LastSnapshotAt == m.CreatedAt {
+		return "snapshot"
+	}
+
+	return "chunk"
+}
+
+func (m *Meta) isEmpty() bool {
+	return *m == emptyMeta
+}
+
+func (m *Meta) isFresh() bool {
+	if m.CurrentIndex > 0 {
+		return false
+	}
+
+	if m.BlockCount > 0 {
+		return false
+	}
+
+	if m.TotalBlockSize > 0 {
+		return false
+	}
+
+	return true
+}
+
+func (m *Meta) isInboundStale(inbound *Meta) bool {
+	if m.isFresh() {
+		return false
+	}
+
+	return m.CreatedAt >= inbound.CreatedAt
 }
