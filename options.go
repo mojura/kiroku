@@ -30,6 +30,7 @@ type Options struct {
 	Dir  string `toml:"dir" json:"dir"`
 	Name string `toml:"name" json:"name"`
 
+	AvoidImportOnInit  bool `toml:"avoid_import_on_init" json:"avoidImportOnInit"`
 	AvoidMergeOnInit   bool `toml:"avoid_merge_on_init" json:"avoidMergeOnInit"`
 	AvoidMergeOnClose  bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
 	AvoidExportOnClose bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
