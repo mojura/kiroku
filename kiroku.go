@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -53,15 +52,12 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 		return
 	}
 
-	k.out.Notification("Writer created")
 	if !k.opts.AvoidImportOnInit {
 		if err = k.syncWithSource(); err != nil {
 			err = fmt.Errorf("error encountered while syncing with source: %v", err)
 			return
 		}
 	}
-
-	k.out.Notification("Synced with source")
 
 	if !k.opts.AvoidMergeOnInit {
 		// Options do not request avoiding merge on initialization, merge remaining chunks
@@ -70,15 +66,11 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 		}
 	}
 
-	k.out.Notification("Merged chunks")
-
 	// Initialize Meta
 	if err = k.initMeta(); err != nil {
 		err = fmt.Errorf("error initializing meta: %v", err)
 		return
 	}
-
-	k.out.Notification("Meta initialized")
 
 	// Increment jobs waiter
 	k.jobs.Add(2)
@@ -140,7 +132,6 @@ func (k *Kiroku) Meta() (m Meta, err error) {
 func (k *Kiroku) Transaction(fn func(*Transaction) error) (err error) {
 	k.mux.Lock()
 	defer k.mux.Unlock()
-	k.out.Notification("Transaction time")
 	// Check to see if Kiroku is closed
 	if k.isClosed() {
 		return errors.ErrIsClosed
@@ -471,10 +462,6 @@ func (k *Kiroku) export(filename string) (err error) {
 			return
 		}
 
-		rs.Seek(0, 0)
-		bs, _ := ioutil.ReadAll(rs)
-		k.out.Notificationf("Exported: <%s>", string(bs[metaSize:]))
-
 		if meta := r.Meta(); meta.LastSnapshotAt != meta.CreatedAt {
 			// This is not a snapshot chunk, return
 			return
@@ -547,7 +534,6 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 	// Since this chunk was freshly created, initialize the chunk Writer
 	w.init(&k.m, unix)
 
-	k.out.Notificationf("Before: %v", k.m)
 	// Call provided function
 	if err = fn(w); err != nil {
 		// Error encountered, delete chunk!
@@ -561,13 +547,10 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 	}
 
 	if w.m.BlockCount == k.m.BlockCount {
-		k.out.Notification("Bailing out, no updates")
 		w.Close()
 		os.Remove(w.filename)
 		return
 	}
-
-	k.out.Notificationf("After: %v", k.m)
 
 	return k.importWriter(w)
 }
