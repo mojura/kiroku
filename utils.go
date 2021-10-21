@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
@@ -32,13 +34,34 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 }
 
 func generateFilename(name string, m Meta) string {
-	kind := "chunk"
-	if m.LastSnapshotAt == m.CreatedAt {
-		kind = "snapshot"
+	if m.CreatedAt == 0 {
+		return ""
 	}
 
-	return fmt.Sprintf("%s.%d.%s.moj", name, m.CreatedAt, kind)
+	return fmt.Sprintf("%s.%d.%s.moj", name, m.CreatedAt, m.getKind())
 
+}
+
+func parseFilename(filename string) (parsed filenameMeta, err error) {
+	spl := strings.Split(filename, ".")
+	if len(spl) != 4 {
+		err = fmt.Errorf("invalid number of filename parts, expected 4 and received %d", len(spl))
+		return
+	}
+
+	if parsed.createdAt, err = strconv.ParseInt(spl[1], 10, 64); err != nil {
+		return
+	}
+
+	parsed.name = spl[0]
+	parsed.kind = spl[2]
+	return
+}
+
+type filenameMeta struct {
+	name      string
+	kind      string
+	createdAt int64
 }
 
 func removeFile(f fs.File, dir string) (err error) {
@@ -60,4 +83,8 @@ type File interface {
 	io.Seeker
 	io.Reader
 	io.ReaderAt
+}
+
+func getSnapshotName(name string) string {
+	return fmt.Sprintf("_latestSnapshots/%s.txt", name)
 }
