@@ -179,9 +179,8 @@ func (w *Writer) Merge(r *Reader) (err error) {
 
 	// Get Meta of Reader
 	m := r.Meta()
-
 	switch {
-	case m.CreatedAt <= w.m.CreatedAt:
+	case w.m.isInboundStale(&m):
 		// Meta is stale, return
 		return
 
