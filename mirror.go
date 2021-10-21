@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path"
 	"sync"
 	"time"
 
@@ -91,7 +89,7 @@ func (m *Mirror) scan() {
 
 	defer m.swg.Done()
 
-	if lastFile, err = m.getLastFile(); err != nil {
+	if lastFile, err = m.k.getNextFile(); err != nil {
 		m.out.Errorf("error getting last file: %v", err)
 		return
 	}
@@ -102,21 +100,6 @@ func (m *Mirror) scan() {
 			return
 		}
 	}
-}
-
-func (m *Mirror) getLastFile() (lastFile string, err error) {
-	var meta Meta
-	if meta, err = m.k.Meta(); err != nil {
-		m.out.Errorf("error getting Meta: %v", err)
-		return
-	}
-
-	if meta.CreatedAt == 0 {
-		return
-	}
-
-	lastFile = generateFilename(m.k.opts.Name, meta)
-	return
 }
 
 func (m *Mirror) update(lastFile string) (filename string, err error) {
@@ -133,58 +116,11 @@ func (m *Mirror) update(lastFile string) (filename string, err error) {
 		return
 	}
 
-	var f *os.File
-	if f, err = m.downloadNext(filename); err != nil {
-		return
-	}
-	defer func() {
-		if err == nil {
-			return
-		}
-
-		err = removeFile(f, m.opts.Dir)
-	}()
-
-	if err = m.importWriter(f); err != nil {
+	if err = m.k.downloadAndImport(filename); err != nil {
 		return
 	}
 
 	m.notify()
-	return
-}
-func (m *Mirror) downloadNext(filename string) (f *os.File, err error) {
-	filepath := path.Join(m.k.opts.Dir, filename)
-	if f, err = os.Create(filepath); err != nil {
-		err = fmt.Errorf("error creating chunk: %v", err)
-		return
-	}
-
-	// TODO: Polish this all up
-	if err = m.src.Import(m.k.ctx, filename, f); err != nil {
-		err = fmt.Errorf("error downloading from source: %v", err)
-		return
-	}
-
-	if _, err = f.Seek(0, 0); err != nil {
-		err = fmt.Errorf("error seeking to beginning of chunk: %v", err)
-		return
-	}
-
-	return
-}
-
-func (m *Mirror) importWriter(f *os.File) (err error) {
-	var w *Writer
-	if w, err = NewWriterWithFile(f); err != nil {
-		err = fmt.Errorf("error creating writer")
-		return
-	}
-
-	if err = m.k.importWriter(w); err != nil {
-		err = fmt.Errorf("error importing writer")
-		return
-	}
-
 	return
 }
 

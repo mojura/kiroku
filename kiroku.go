@@ -1,8 +1,11 @@
 package kiroku
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -50,6 +53,16 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 		return
 	}
 
+	k.out.Notification("Writer created")
+	if !k.opts.AvoidImportOnInit {
+		if err = k.syncWithSource(); err != nil {
+			err = fmt.Errorf("error encountered while syncing with source: %v", err)
+			return
+		}
+	}
+
+	k.out.Notification("Synced with source")
+
 	if !k.opts.AvoidMergeOnInit {
 		// Options do not request avoiding merge on initialization, merge remaining chunks
 		if err = k.handleRemaining("chunk", k.merge); err != nil {
@@ -57,11 +70,15 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 		}
 	}
 
+	k.out.Notification("Merged chunks")
+
 	// Initialize Meta
 	if err = k.initMeta(); err != nil {
 		err = fmt.Errorf("error initializing meta: %v", err)
 		return
 	}
+
+	k.out.Notification("Meta initialized")
 
 	// Increment jobs waiter
 	k.jobs.Add(2)
@@ -123,7 +140,7 @@ func (k *Kiroku) Meta() (m Meta, err error) {
 func (k *Kiroku) Transaction(fn func(*Transaction) error) (err error) {
 	k.mux.Lock()
 	defer k.mux.Unlock()
-
+	k.out.Notification("Transaction time")
 	// Check to see if Kiroku is closed
 	if k.isClosed() {
 		return errors.ErrIsClosed
@@ -211,6 +228,10 @@ func (k *Kiroku) initMeta() (err error) {
 		filename string
 		ok       bool
 	)
+
+	if !k.m.isEmpty() {
+		return
+	}
 
 	// Get last chunk
 	filename, ok, err = k.getLast("chunk")
@@ -446,7 +467,27 @@ func (k *Kiroku) export(filename string) (err error) {
 
 		// Export file
 		// TODO: Utilize a kiroku-level context and pass it here
-		return k.src.Export(context.Background(), exportFilename, rs)
+		if err = k.src.Export(context.Background(), exportFilename, rs); err != nil {
+			return
+		}
+
+		rs.Seek(0, 0)
+		bs, _ := ioutil.ReadAll(rs)
+		k.out.Notificationf("Exported: <%s>", string(bs[metaSize:]))
+
+		if meta := r.Meta(); meta.LastSnapshotAt != meta.CreatedAt {
+			// This is not a snapshot chunk, return
+			return
+		}
+
+		// Everything below pertains only to snapshot chunks
+		snapshotFilename := getSnapshotName(k.opts.Name)
+		body := strings.NewReader(exportFilename)
+		if err = k.src.Export(context.Background(), snapshotFilename, body); err != nil {
+			return
+		}
+
+		return
 	}); err != nil {
 		err = fmt.Errorf("error encountered while exporting: %v", err)
 		return
@@ -506,6 +547,7 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 	// Since this chunk was freshly created, initialize the chunk Writer
 	w.init(&k.m, unix)
 
+	k.out.Notificationf("Before: %v", k.m)
 	// Call provided function
 	if err = fn(w); err != nil {
 		// Error encountered, delete chunk!
@@ -517,6 +559,15 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 		// Return error from provided function
 		return
 	}
+
+	if w.m.BlockCount == k.m.BlockCount {
+		k.out.Notification("Bailing out, no updates")
+		w.Close()
+		os.Remove(w.filename)
+		return
+	}
+
+	k.out.Notificationf("After: %v", k.m)
 
 	return k.importWriter(w)
 }
@@ -542,4 +593,156 @@ func (k *Kiroku) importWriter(w *Writer) (err error) {
 	// Set underlying Meta as the transaction chunk's Meta
 	k.m = newMeta
 	return
+}
+
+func (k *Kiroku) download(filename string) (f *os.File, err error) {
+	filepath := path.Join(k.opts.Dir, filename)
+	if f, err = os.Create(filepath); err != nil {
+		err = fmt.Errorf("error creating chunk: %v", err)
+		return
+	}
+
+	// TODO: Polish this all up
+	if err = k.src.Import(k.ctx, filename, f); err != nil {
+		err = fmt.Errorf("error downloading from source: %v", err)
+		return
+	}
+
+	if _, err = f.Seek(0, 0); err != nil {
+		err = fmt.Errorf("error seeking to beginning of chunk: %v", err)
+		return
+	}
+
+	return
+}
+
+func (k *Kiroku) downloadAndImport(filename string) (err error) {
+	var f *os.File
+	if f, err = k.download(filename); err != nil {
+		err = fmt.Errorf("error downloading <%s>: %v", filename, err)
+		return
+	}
+	defer func() {
+		if err == nil {
+			f.Close()
+			return
+		}
+
+		if err := removeFile(f, k.opts.Dir); err != nil {
+			k.out.Errorf("error removing file <")
+		}
+	}()
+
+	var w *Writer
+	if w, err = NewWriterWithFile(f); err != nil {
+		err = fmt.Errorf("error creating writer")
+		return
+	}
+
+	if err = k.importWriter(w); err != nil {
+		err = fmt.Errorf("error importing writer")
+		return
+	}
+
+	return
+}
+
+func (k *Kiroku) syncWithSource() (err error) {
+	if k.src == nil {
+		return
+	}
+
+	prefix := k.opts.Name + "."
+	for nextFile, err := k.getInitialSyncFile(); err == nil; nextFile, err = k.syncWithFile(prefix, nextFile) {
+	}
+
+	if err == io.EOF {
+		err = nil
+	}
+
+	return
+}
+
+func (k *Kiroku) syncWithFile(prefix, filename string) (nextFile string, err error) {
+	if err = k.downloadAndImport(filename); err != nil {
+		err = fmt.Errorf("error during download and import: %v", err)
+		return
+	}
+
+	nextFile, err = k.src.GetNext(k.ctx, prefix, filename)
+	switch err {
+	case nil:
+		return
+	case io.EOF:
+		return
+	default:
+		err = fmt.Errorf("error while getting next: %v", err)
+		return
+	}
+}
+
+func (k *Kiroku) getInitialSyncFile() (nextFile string, err error) {
+	var meta Meta
+	if meta, err = k.Meta(); err != nil {
+		err = fmt.Errorf("error getting Meta: %v", err)
+		return
+	}
+
+	var latestSnapshot string
+	latestSnapshot, err = k.getLatestSnapshotFilename()
+	switch err {
+	case nil:
+		var parsed filenameMeta
+		if parsed, err = parseFilename(latestSnapshot); err != nil {
+			return
+		}
+
+		if meta.CreatedAt < parsed.createdAt {
+			nextFile = latestSnapshot
+			return
+		}
+
+	case os.ErrNotExist:
+		// Snapshot doesn't exist, continue on in attempt to get next file
+
+	default:
+		return
+	}
+
+	return k.getNextFile()
+}
+
+func (k *Kiroku) getLatestSnapshotFilename() (filename string, err error) {
+	snapshotFilename := getSnapshotName(k.opts.Name)
+	err = k.src.Get(k.ctx, snapshotFilename, func(r io.Reader) (err error) {
+		buf := bytes.NewBuffer(nil)
+		_, err = io.Copy(buf, r)
+		switch err {
+		case nil:
+			filename = buf.String()
+			return
+		case io.EOF:
+			return nil
+
+		default:
+			return
+		}
+	})
+
+	return
+}
+
+func (k *Kiroku) getNextFile() (nextFile string, err error) {
+	var meta Meta
+	if meta, err = k.Meta(); err != nil {
+		err = fmt.Errorf("error getting Meta: %v", err)
+		return
+	}
+
+	var currentFile string
+	if meta.CreatedAt > 0 {
+		currentFile = generateFilename(k.opts.Name, meta)
+	}
+
+	return k.src.GetNext(k.ctx, k.opts.Name+".", currentFile)
 }

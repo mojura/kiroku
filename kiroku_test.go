@@ -512,6 +512,54 @@ func TestKiroku_Transaction_with_nil_exporter(t *testing.T) {
 	k.Close()
 }
 
+func TestKiroku_Transaction_with_empty_actions(t *testing.T) {
+	var (
+		k   *Kiroku
+		err error
+	)
+
+	if err = os.Mkdir("test_data", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
+	opts := MakeOptions("test_data", "tester")
+	if k, err = New(opts, nil); err != nil {
+		t.Fatal(err)
+	}
+	defer k.Close()
+
+	if err = k.Transaction(func(t *Transaction) (err error) {
+		if err = t.SetIndex(1337); err != nil {
+			return
+		}
+
+		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
+	}); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	meta, _ := k.Meta()
+	fmt.Printf("Meta: %+v\n", meta)
+
+	if err = k.Snapshot(func(ss *Snapshot) (err error) {
+		return ss.Write([]byte("testKey"), []byte("hello world!"))
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = k.Transaction(func(t *Transaction) (err error) {
+		return
+	}); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	meta, _ = k.Meta()
+	fmt.Printf("Meta: %+v\n", meta)
+}
+
 func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	var (
 		k   *Kiroku
