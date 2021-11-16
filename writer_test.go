@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,115 +122,6 @@ func TestWriter_Meta(t *testing.T) {
 		if meta.BlockCount != int64(i)+1 {
 			t.Fatalf("invalid block count, expected %d and received %d", i, meta.BlockCount)
 		}
-	}
-}
-
-func TestWriter_GetIndex(t *testing.T) {
-	testSetIndexGetIndex(t)
-}
-
-func TestWriter_GetIndex_on_closed(t *testing.T) {
-	var (
-		w   *Writer
-		err error
-	)
-
-	if err = os.Mkdir("./test_data", 0744); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll("./test_data")
-
-	if w, err = NewWriter("./test_data", "testie"); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = w.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err = w.GetIndex(); err != errors.ErrIsClosed {
-		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
-	}
-}
-
-func TestWriter_SetIndex(t *testing.T) {
-	testSetIndexGetIndex(t)
-}
-
-func TestWriter_SetIndex_on_closed(t *testing.T) {
-	var (
-		w   *Writer
-		err error
-	)
-
-	if err = os.Mkdir("./test_data", 0744); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll("./test_data")
-
-	if w, err = NewWriter("./test_data", "testie"); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = w.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = w.SetIndex(1337); err != errors.ErrIsClosed {
-		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
-	}
-}
-
-func TestWriter_NextIndex(t *testing.T) {
-	var (
-		w   *Writer
-		err error
-	)
-
-	if err = os.Mkdir("./test_data", 0744); err != nil {
-		t.Fatal(err)
-		return
-	}
-	defer os.RemoveAll("./test_data")
-
-	if w, err = NewWriter("./test_data", "testie"); err != nil {
-		t.Fatal(err)
-		return
-	}
-
-	for i := uint64(0); i < 100; i++ {
-		var index uint64
-		index, err = w.NextIndex()
-		switch {
-		case err != nil:
-			t.Fatal(err)
-		case index != i:
-			t.Fatalf("invalid index, expected %d and received %d", i, index)
-		}
-	}
-}
-
-func TestWriter_NextIndex_on_closed(t *testing.T) {
-	var (
-		w   *Writer
-		err error
-	)
-
-	if err = os.Mkdir("./test_data", 0744); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll("./test_data")
-
-	if w, err = NewWriter("./test_data", "testie"); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = w.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err = w.NextIndex(); err != errors.ErrIsClosed {
-		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
 	}
 }
 
@@ -376,10 +268,6 @@ func TestWriter_Merge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = chunk.SetIndex(2); err != nil {
-		t.Fatal(err)
-	}
-
 	chunkFilename := chunk.filename
 	chunkSize := chunk.m.TotalBlockSize
 
@@ -397,8 +285,8 @@ func TestWriter_Merge(t *testing.T) {
 	}
 
 	switch {
-	case w.m.CurrentIndex != 2:
-		t.Fatalf("invalid index, expected %d and received %d", 2, w.m.CurrentIndex)
+	case w.m.BlockCount != 3:
+		t.Fatalf("invalid index, expected %d and received %d", 3, w.m.BlockCount)
 	case w.m.TotalBlockSize != expectedTotal:
 		t.Fatalf("invalid total block size, expected %d bytes and received %d", expectedTotal, w.m.TotalBlockSize)
 	}
@@ -441,10 +329,6 @@ func TestWriter_Merge_stale(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = chunk.SetIndex(2); err != nil {
-		t.Fatal(err)
-	}
-
 	chunkFilename := chunk.filename
 	chunkSize := chunk.m.TotalBlockSize
 
@@ -467,8 +351,8 @@ func TestWriter_Merge_stale(t *testing.T) {
 	}
 
 	switch {
-	case w.m.CurrentIndex != 2:
-		t.Fatalf("invalid index, expected %d and received %d", 2, w.m.CurrentIndex)
+	case w.m.BlockCount != 3:
+		t.Fatalf("invalid index, expected %d and received %d", 3, w.m.BlockCount)
 	case w.m.TotalBlockSize != expectedTotal:
 		t.Fatalf("invalid total block size, expected %d bytes and received %d", expectedTotal, w.m.TotalBlockSize)
 	}
@@ -514,10 +398,6 @@ func TestWriter_Merge_with_updated_snapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = chunk.SetIndex(2); err != nil {
-		t.Fatal(err)
-	}
-
 	chunkFilename := chunk.filename
 	chunkSize := chunk.m.TotalBlockSize
 
@@ -537,8 +417,8 @@ func TestWriter_Merge_with_updated_snapshot(t *testing.T) {
 	}
 
 	switch {
-	case w.m.CurrentIndex != 2:
-		t.Fatalf("invalid index, expected %d and received %d", 2, w.m.CurrentIndex)
+	case w.m.BlockCount != 2:
+		t.Fatalf("invalid index, expected %d and received %d", 2, w.m.BlockCount)
 	case w.m.TotalBlockSize != chunkSize:
 		t.Fatalf("invalid total block size, expected %d bytes and received %d", chunkSize, w.m.TotalBlockSize)
 	}
@@ -581,10 +461,6 @@ func TestWriter_Merge_with_updated_snapshot_and_error(t *testing.T) {
 	}
 
 	if err = chunk.AddBlock(TypeWriteAction, []byte("2"), []byte("value")); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = chunk.SetIndex(2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -649,10 +525,6 @@ func TestWriter_Merge_with_reader_error(t *testing.T) {
 	}
 
 	if err = chunk.AddBlock(TypeWriteAction, []byte("2"), []byte("value")); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = chunk.SetIndex(2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -785,41 +657,6 @@ func ExampleNewWriter() {
 	}
 }
 
-func ExampleWriter_GetIndex() {
-	var (
-		index uint64
-		err   error
-	)
-
-	if index, err = testWriter.GetIndex(); err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	fmt.Println("Current index:", index)
-}
-
-func ExampleWriter_SetIndex() {
-	var err error
-	if err = testWriter.SetIndex(1337); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func ExampleWriter_NextIndex() {
-	var (
-		index uint64
-		err   error
-	)
-
-	if index, err = testWriter.NextIndex(); err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	fmt.Println("Next index:", index)
-}
-
 func ExampleWriter_AddBlock() {
 	var err error
 	if err = testWriter.AddBlock(TypeWriteAction, []byte("greeting"), []byte("Hello world!")); err != nil {
@@ -828,44 +665,10 @@ func ExampleWriter_AddBlock() {
 	}
 }
 
-func testSetIndexGetIndex(t *testing.T) {
-	var (
-		w   *Writer
-		err error
-	)
-
-	tcs := readerTestcases
-	if err = os.Mkdir("./test_data", 0744); err != nil {
-		t.Fatal(err)
-		return
-	}
-	defer os.RemoveAll("./test_data")
-
-	if w, err = NewWriter("./test_data", "testie"); err != nil {
-		t.Fatal(err)
-		return
-	}
-
-	for _, tc := range tcs {
-		if err = w.SetIndex(tc.index); err != nil {
-			t.Fatal(err)
-		}
-
-		var index uint64
-		index, err = w.GetIndex()
-		switch {
-		case err != nil:
-			t.Fatal(err)
-		case index != tc.index:
-			t.Fatalf("invalid index, expected %d and received %d", tc.index, index)
-		}
-	}
-}
-
 func compareErrors(expected, received error) (err error) {
 	aStr := errToString(expected)
 	bStr := errToString(received)
-	if aStr == bStr {
+	if strings.Contains(bStr, aStr) {
 		return
 	}
 

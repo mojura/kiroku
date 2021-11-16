@@ -98,20 +98,9 @@ func TestNew_with_loading_unmerged_chunk(t *testing.T) {
 	}
 
 	if err = k.Transaction(func(txn *Transaction) (err error) {
-		// Set index to 100 to add an extra potential for failure on unprocessed chunk importing
-		if err = txn.SetIndex(100); err != nil {
-			return
-		}
-
-		var index uint64
 		// Create 10 entries
 		for i := 0; i < 10; i++ {
-			if index, err = txn.NextIndex(); err != nil {
-				return
-			}
-
-			indexStr := strconv.FormatUint(index, 10)
-
+			indexStr := strconv.Itoa(i)
 			if err = txn.AddBlock(TypeWriteAction, []byte(indexStr), []byte("value")); err != nil {
 				return
 			}
@@ -137,8 +126,6 @@ func TestNew_with_loading_unmerged_chunk(t *testing.T) {
 	}
 
 	switch {
-	case m.CurrentIndex != 110:
-		t.Fatalf("invalid current index, expected %d and received %d", 110, m.CurrentIndex)
 	case m.BlockCount != 10:
 		t.Fatalf("invalid block count, expected %d and received %d", 10, m.BlockCount)
 	}
@@ -203,6 +190,8 @@ func TestNew_with_invalid_exporting_chunk_permissions(t *testing.T) {
 
 	src := newMockSource(efn, nil, nil, nil)
 	opts := MakeOptions("test_data", "test")
+	opts.AvoidImportOnInit = true
+
 	if k, err = New(opts, src); err != nil {
 		t.Fatal(err)
 	}
@@ -397,10 +386,6 @@ func TestKiroku_Meta(t *testing.T) {
 	defer k.Close()
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
@@ -412,8 +397,8 @@ func TestKiroku_Meta(t *testing.T) {
 	switch {
 	case err != nil:
 		return
-	case m.CurrentIndex != 1337:
-		t.Fatalf("invalid index, expected %d and received %d", 1337, m.CurrentIndex)
+	case m.BlockCount != 1:
+		t.Fatalf("invalid block count, expected %d and received %d", 1, m.BlockCount)
 		return
 	}
 }
@@ -436,10 +421,6 @@ func TestKiroku_Meta_on_closed(t *testing.T) {
 	defer k.Close()
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
@@ -471,10 +452,6 @@ func TestKiroku_Transaction_with_nil_exporter(t *testing.T) {
 	defer k.Close()
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
@@ -493,13 +470,12 @@ func TestKiroku_Transaction_with_nil_exporter(t *testing.T) {
 	}
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		var index uint64
-		index, err = t.GetIndex()
+		meta := t.w.m
 		switch {
 		case err != nil:
 			return
-		case index != 1337:
-			err = fmt.Errorf("invalid index, expected %d and received %d", 1337, index)
+		case meta.BlockCount != 1:
+			err = fmt.Errorf("invalid block count, expected %d and received %d", 1, meta.BlockCount)
 			return
 		}
 
@@ -530,10 +506,6 @@ func TestKiroku_Transaction_with_empty_actions(t *testing.T) {
 	defer k.Close()
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
@@ -575,6 +547,7 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	wg.Add(2)
 
 	efn := func(ctx context.Context, filename string, r io.Reader) (err error) {
+		fmt.Println("Boom", filename)
 		wg.Done()
 		return
 	}
@@ -582,6 +555,8 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	src := newMockSource(efn, nil, nil, nil)
 
 	opts := MakeOptions("./test_data", "tester")
+	opts.AvoidImportOnInit = true
+
 	if k, err = New(opts, src); err != nil {
 		t.Fatal(err)
 		return
@@ -589,10 +564,6 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	defer k.Close()
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
@@ -609,17 +580,17 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	}
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		var index uint64
-		index, err = t.GetIndex()
+		meta := t.w.m
 		switch {
 		case err != nil:
 			return
-		case index != 1337:
-			err = fmt.Errorf("invalid index, expected %d and received %d", 1337, index)
+		case meta.BlockCount != 1:
+			err = fmt.Errorf("invalid block count, expected %d and received %d", 1, meta.BlockCount)
 			return
 		}
 
-		return
+		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world! 2"))
+
 	}); err != nil {
 		t.Fatal(err)
 		return
@@ -650,10 +621,6 @@ func TestKiroku_Transaction_on_closed(t *testing.T) {
 	}
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != errors.ErrIsClosed {
 		t.Fatalf("invalid error, expected <%v> and received <%v>", errors.ErrIsClosed, err)
@@ -679,10 +646,6 @@ func TestKiroku_Snapshot(t *testing.T) {
 	defer k.Close()
 
 	if err = k.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		if err = t.AddBlock(TypeWriteAction, []byte("0"), []byte("hello world!")); err != nil {
 			return
 		}
@@ -922,10 +885,6 @@ func ExampleKiroku_Meta() {
 func ExampleKiroku_Transaction() {
 	var err error
 	if err = testKiroku.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		log.Fatal(err)

@@ -20,14 +20,12 @@ func NewMirror(opts Options, src Source) (mp *Mirror, err error) {
 // NewMirrorWithContext will initialize a new Mirror instance with a provided context.Context
 func NewMirrorWithContext(ctx context.Context, opts Options, src Source) (mp *Mirror, err error) {
 	var m Mirror
-	if m.k, err = NewWithContext(ctx, opts, nil); err != nil {
+	if m.k, err = NewWithContext(ctx, opts, src); err != nil {
 		return
 	}
 
 	scribePrefix := fmt.Sprintf("Kiroku [%s] (Mirror)", opts.Name)
 	m.out = scribe.New(scribePrefix)
-	m.src = src
-	m.opts = opts
 	m.ch = make(chan struct{}, 1)
 	m.swg.Add(1)
 	go m.scan()

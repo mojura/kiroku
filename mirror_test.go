@@ -130,10 +130,6 @@ func TestMirror_Meta(t *testing.T) {
 	}
 	defer m.Close()
 	if err = m.k.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
 	}); err != nil {
 		t.Fatal(err)
@@ -144,9 +140,8 @@ func TestMirror_Meta(t *testing.T) {
 	meta, err = m.Meta()
 	switch {
 	case err != nil:
-		return
-	case meta.CurrentIndex != 1337:
-		t.Fatalf("invalid index, expected %d and received %d", 1337, meta.CurrentIndex)
+	case meta.isEmpty():
+		t.Fatal("found empty meta when non empty was expected")
 		return
 	}
 }

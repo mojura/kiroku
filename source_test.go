@@ -2,6 +2,7 @@ package kiroku
 
 import (
 	"context"
+	"fmt"
 	"io"
 )
 
@@ -11,6 +12,7 @@ func newMockSource(e exportFn, i importFn, g getFn, gn getNextFn) *mockSource {
 	m.importFn = i
 	m.getFn = g
 	m.getNextFn = gn
+	fmt.Printf("Mockie: %+v\n", m)
 	return &m
 }
 

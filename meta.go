@@ -44,9 +44,6 @@ func newMetaFromReader(r io.ReadSeeker) (m Meta, err error) {
 
 // Meta represents the historical meta data
 type Meta struct {
-	// CurrentIndex would be the current index count
-	CurrentIndex uint64 `json:"currentIndex"`
-
 	// BlockCount is the number of blocks contained within the Chunk
 	BlockCount int64 `json:"blockCount"`
 	// TotalBlockSize is the total block size (in bytes)
@@ -86,10 +83,6 @@ func (m *Meta) isEmpty() bool {
 }
 
 func (m *Meta) isFresh() bool {
-	if m.CurrentIndex > 0 {
-		return false
-	}
-
 	if m.BlockCount > 0 {
 		return false
 	}

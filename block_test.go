@@ -2,8 +2,8 @@ package kiroku
 
 import (
 	"bytes"
+	"fmt"
 	"io"
-	"strings"
 	"testing"
 
 	"github.com/hatchify/errors"
@@ -134,24 +134,13 @@ func TestBlock_UnmarshalEnkodo_with_errors(t *testing.T) {
 			count: 4,
 			err:   targetErr,
 		},
-		{
-			r:     bytes.NewReader(buf.Bytes()),
-			count: 5,
-			err:   nil,
-		},
 	}
 
 	for i, tc := range tcs {
 		err := enkodo.NewReader(&tc).Decode(&b)
-		switch {
-		case tc.err == nil && err == nil:
-		case tc.err == err:
-		case tc.err == nil && err != nil:
-			t.Fatalf("invalid error, expected <nil> and received <%v>", err)
-		case tc.err != nil && err == nil:
-			t.Fatalf("invalid error, expected <%v> and received <nil>", tc.err)
-		case tc.err != nil && !strings.Contains(err.Error(), tc.err.Error()):
-			t.Fatalf("invalid error, expected to contain <%v> and received <%v> (test case #%d)", tc.err, err, i)
+		fmt.Println("test", i, err)
+		if err = compareErrors(tc.err, err); err != nil {
+			t.Fatalf("%v (test case #%d", err, i)
 		}
 	}
 }

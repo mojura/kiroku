@@ -14,28 +14,28 @@ import (
 
 var readerTestcases = [4]readerTestcase{
 	{
-		t:     TypeWriteAction,
-		key:   "key1",
-		value: "foo 1",
-		index: 1,
+		t:          TypeWriteAction,
+		key:        "key1",
+		value:      "foo 1",
+		blockCount: 1,
 	},
 	{
-		t:     TypeWriteAction,
-		key:   "key2",
-		value: "foo 2",
-		index: 2,
+		t:          TypeWriteAction,
+		key:        "key2",
+		value:      "foo 2",
+		blockCount: 2,
 	},
 	{
-		t:     TypeWriteAction,
-		key:   "key3",
-		value: "foo 3",
-		index: 3,
+		t:          TypeWriteAction,
+		key:        "key3",
+		value:      "foo 3",
+		blockCount: 3,
 	},
 	{
-		t:     TypeDeleteAction,
-		key:   "key3",
-		value: "",
-		index: 3,
+		t:          TypeDeleteAction,
+		key:        "key3",
+		value:      "",
+		blockCount: 4,
 	},
 }
 
@@ -645,8 +645,8 @@ func ExampleRead() {
 
 func testMeta(r *Reader, tcs []readerTestcase) (err error) {
 	meta := r.Meta()
-	if last := tcs[len(tcs)-1]; meta.CurrentIndex != last.index {
-		return fmt.Errorf("invalid index, expected %d and received %d", last.index, meta.CurrentIndex)
+	if last := tcs[len(tcs)-1]; meta.BlockCount != last.blockCount {
+		return fmt.Errorf("invalid index, expected %d and received %d", last.blockCount, meta.BlockCount)
 	}
 
 	if meta.BlockCount != int64(len(tcs)) {
@@ -687,10 +687,10 @@ func testForEach(r *Reader, tcs []readerTestcase, seek int64) (lastPosition int6
 }
 
 type readerTestcase struct {
-	t     Type
-	key   string
-	value string
-	index uint64
+	t          Type
+	key        string
+	value      string
+	blockCount int64
 
 	lastBlockSize int64
 }
@@ -699,10 +699,6 @@ func populateReaderTestcase(w *Writer, tcs []readerTestcase) (err error) {
 	for i, tc := range tcs {
 		if err = w.AddBlock(tc.t, []byte(tc.key), []byte(tc.value)); err != nil {
 			err = fmt.Errorf("error adding row: %v", err)
-			return
-		}
-
-		if err = w.SetIndex(tc.index); err != nil {
 			return
 		}
 
