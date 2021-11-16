@@ -50,10 +50,6 @@ func ExampleKiroku_Meta() {
 func ExampleKiroku_Transaction() {
 	var err error
 	if err = testKiroku.Transaction(func(t *Transaction) (err error) {
-		if err = t.SetIndex(1337); err != nil {
-			return
-		}
-
 		return t.AddBlock(TypeWriteAction, []byte("hello world!"))
 	}); err != nil {
 		log.Fatal(err)
@@ -83,50 +79,6 @@ func ExampleNewWriter() {
 		log.Fatal(err)
 		return
 	}
-}
-```
-
-### Writer.GetIndex
-```go
-func ExampleWriter_GetIndex() {
-	var (
-		index uint64
-		err   error
-	)
-
-	if index, err = testWriter.GetIndex(); err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	fmt.Println("Current index:", index)
-}
-```
-
-### Writer.SetIndex
-```go
-func ExampleWriter_SetIndex() {
-	var err error
-	if err = testWriter.SetIndex(1337); err != nil {
-		log.Fatal(err)
-	}
-}
-```
-
-### Writer.NextIndex
-```go
-func ExampleWriter_NextIndex() {
-	var (
-		index uint64
-		err   error
-	)
-
-	if index, err = testWriter.NextIndex(); err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	fmt.Println("Next index:", index)
 }
 ```
 

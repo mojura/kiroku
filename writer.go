@@ -95,53 +95,6 @@ func (w *Writer) Meta() Meta {
 	return *w.m
 }
 
-// GetIndex will get the current index value
-func (w *Writer) GetIndex() (index uint64, err error) {
-	w.mux.RLock()
-	defer w.mux.RUnlock()
-
-	if w.closed {
-		err = errors.ErrIsClosed
-		return
-	}
-
-	// Return current index
-	index = w.m.CurrentIndex
-	return
-}
-
-// NextIndex will get the current index value then increment the internal value
-func (w *Writer) NextIndex() (index uint64, err error) {
-	w.mux.Lock()
-	defer w.mux.Unlock()
-
-	if w.closed {
-		err = errors.ErrIsClosed
-		return
-	}
-
-	// Get current index
-	index = w.m.CurrentIndex
-	// Increment current index
-	w.m.CurrentIndex++
-	return
-}
-
-// SetIndex will set the index value
-// Note: This can be used to manually set an index to a desired value
-func (w *Writer) SetIndex(index uint64) (err error) {
-	w.mux.Lock()
-	defer w.mux.Unlock()
-
-	if w.closed {
-		return errors.ErrIsClosed
-	}
-
-	// Set current index as the provided index
-	w.m.CurrentIndex = index
-	return
-}
-
 // AddBlock will add a row
 func (w *Writer) AddBlock(t Type, key, value []byte) (err error) {
 	if err = t.Validate(); err != nil {
