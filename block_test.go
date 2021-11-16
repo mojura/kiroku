@@ -2,7 +2,6 @@ package kiroku
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"testing"
 
@@ -138,7 +137,6 @@ func TestBlock_UnmarshalEnkodo_with_errors(t *testing.T) {
 
 	for i, tc := range tcs {
 		err := enkodo.NewReader(&tc).Decode(&b)
-		fmt.Println("test", i, err)
 		if err = compareErrors(tc.err, err); err != nil {
 			t.Fatalf("%v (test case #%d", err, i)
 		}

@@ -512,9 +512,6 @@ func TestKiroku_Transaction_with_empty_actions(t *testing.T) {
 		return
 	}
 
-	meta, _ := k.Meta()
-	fmt.Printf("Meta: %+v\n", meta)
-
 	if err = k.Snapshot(func(ss *Snapshot) (err error) {
 		return ss.Write([]byte("testKey"), []byte("hello world!"))
 	}); err != nil {
@@ -527,9 +524,6 @@ func TestKiroku_Transaction_with_empty_actions(t *testing.T) {
 		t.Fatal(err)
 		return
 	}
-
-	meta, _ = k.Meta()
-	fmt.Printf("Meta: %+v\n", meta)
 }
 
 func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
@@ -547,7 +541,6 @@ func TestKiroku_Transaction_with_custom_processor(t *testing.T) {
 	wg.Add(2)
 
 	efn := func(ctx context.Context, filename string, r io.Reader) (err error) {
-		fmt.Println("Boom", filename)
 		wg.Done()
 		return
 	}

@@ -727,7 +727,5 @@ func (k *Kiroku) getNextFile() (nextFile string, err error) {
 		currentFile = generateFilename(k.opts.Name, meta)
 	}
 
-	fmt.Println("GET NEXT?", k.opts, k.ctx, k.src)
-
 	return k.src.GetNext(k.ctx, k.opts.Name+".", currentFile)
 }
