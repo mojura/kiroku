@@ -122,6 +122,38 @@ func Test_removeFile_with_close_error(t *testing.T) {
 	}
 }
 
+func Test_isNilSrc(t *testing.T) {
+	type testcase struct {
+		getSrc  func() Source
+		expects bool
+	}
+
+	tcs := []testcase{
+		{
+			getSrc:  func() Source { return nil },
+			expects: true,
+		},
+		{
+			getSrc: func() Source {
+				var s Source
+				return s
+			},
+			expects: true,
+		},
+		{
+			getSrc:  func() Source { return &mockSource{} },
+			expects: false,
+		},
+	}
+
+	for i, tc := range tcs {
+		val := isNilSource(tc.getSrc())
+		if val != tc.expects {
+			t.Fatalf("invalid value, expected %v and received %v (Test case #%d)", tc.expects, val, i)
+		}
+	}
+}
+
 type mockFile struct {
 	stat  func() (fs.FileInfo, error)
 	read  func([]byte) (int, error)
