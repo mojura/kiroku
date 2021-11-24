@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -42,6 +43,8 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 	// Set exporter
 	// Note: This field is optional and might be nil
 	k.src = src
+	// Set source state
+	k.hasSource = !reflect.ValueOf(k.src).IsNil()
 	// Initialize semaphores
 	k.ms = make(semaphore, 1)
 	k.es = make(semaphore, 1)
@@ -92,6 +95,10 @@ type Kiroku struct {
 
 	// Kiroku options
 	opts Options
+
+	src       Source
+	hasSource bool
+
 	// Goroutine job waiter
 	jobs sync.WaitGroup
 
@@ -109,8 +116,6 @@ type Kiroku struct {
 	ctx context.Context
 	// Context cancel func
 	cancelFn func()
-
-	src Source
 }
 
 // Meta will return a copy of the current Meta
@@ -439,7 +444,7 @@ func (k *Kiroku) merge(filename string) (err error) {
 }
 
 func (k *Kiroku) export(filename string) (err error) {
-	if k.src == nil {
+	if !k.hasSource {
 		// Exporter not set, return
 		return
 	}
@@ -631,7 +636,7 @@ func (k *Kiroku) downloadAndImport(filename string) (err error) {
 }
 
 func (k *Kiroku) syncWithSource() (err error) {
-	if k.src == nil {
+	if !k.hasSource {
 		return
 	}
 

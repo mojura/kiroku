@@ -2,13 +2,22 @@ package kiroku
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
 	"time"
 
 	"github.com/gdbu/scribe"
+	"github.com/hatchify/errors"
+)
+
+const (
+	// ErrMirrorNilSource is returned when a mirror is initialized with a nil source
+	ErrMirrorNilSource = errors.Error("mirrors cannot have a nil source")
+	// ErrMirrorTransaction is returned when a mirror attempts a transaction
+	ErrMirrorTransaction = errors.Error("mirrors cannot perform transactions")
+	// ErrMirrorSnapshot is returned when a mirror attempts to snapshot
+	ErrMirrorSnapshot = errors.Error("mirrors cannot perform snapshots")
 )
 
 // NewMirror will initialize a new Mirror instance
@@ -21,6 +30,11 @@ func NewMirror(opts Options, src Source) (mp *Mirror, err error) {
 func NewMirrorWithContext(ctx context.Context, opts Options, src Source) (mp *Mirror, err error) {
 	var m Mirror
 	if m.k, err = NewWithContext(ctx, opts, src); err != nil {
+		return
+	}
+
+	if !m.k.hasSource {
+		err = ErrMirrorNilSource
 		return
 	}
 
@@ -62,11 +76,11 @@ func (m *Mirror) Filename() (filename string, err error) {
 }
 
 func (m *Mirror) Transaction(fn func(*Transaction) error) (err error) {
-	return errors.New("mirrors cannot perform transactions")
+	return ErrMirrorNilSource
 }
 
 func (m *Mirror) Snapshot(fn func(*Snapshot) error) (err error) {
-	return errors.New("mirrors cannot perform snapshots")
+	return ErrMirrorSnapshot
 }
 
 // Close will close the selected instance of Kiroku
