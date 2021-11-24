@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -44,7 +43,7 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 	// Note: This field is optional and might be nil
 	k.src = src
 	// Set source state
-	k.hasSource = !reflect.ValueOf(k.src).IsNil()
+	k.hasSource = !isNilSource(src)
 	// Initialize semaphores
 	k.ms = make(semaphore, 1)
 	k.es = make(semaphore, 1)

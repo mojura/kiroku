@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -87,4 +88,21 @@ type File interface {
 
 func getSnapshotName(name string) string {
 	return fmt.Sprintf("_latestSnapshots/%s.txt", name)
+}
+
+func isNilSource(s Source) (isNil bool) {
+	val := reflect.ValueOf(s)
+	if !val.IsValid() {
+		return true
+	}
+
+	if val.IsZero() {
+		return true
+	}
+
+	if val.IsNil() {
+		return true
+	}
+
+	return false
 }
