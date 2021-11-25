@@ -52,11 +52,8 @@ func NewMirrorWithContext(ctx context.Context, opts Options, src Source) (mp *Mi
 type Mirror struct {
 	out *scribe.Scribe
 
-	k   *Kiroku
-	src Source
-	ch  chan struct{}
-
-	opts Options
+	k  *Kiroku
+	ch chan struct{}
 
 	swg sync.WaitGroup
 }
@@ -101,7 +98,7 @@ func (m *Mirror) scan() {
 
 	defer m.swg.Done()
 
-	if lastFile, err = m.k.getNextFile(); err != nil {
+	if lastFile, err = m.getNextFile(); err != nil {
 		m.out.Errorf("error getting last file: %v", err)
 		return
 	}
@@ -114,13 +111,33 @@ func (m *Mirror) scan() {
 	}
 }
 
+func (m *Mirror) getNextFile() (nextFile string, err error) {
+	for err == nil {
+		if nextFile, err = m.k.getNextFile(); err == io.EOF {
+			err = m.sleep(m.k.opts.EndOfResultsDelay)
+		}
+
+		switch err {
+		case nil:
+			return
+		case io.EOF:
+			err = m.sleep(m.k.opts.EndOfResultsDelay)
+
+		default:
+			return
+		}
+	}
+
+	return
+}
+
 func (m *Mirror) update(lastFile string) (filename string, err error) {
 	prefix := m.k.opts.Name + "."
-	filename, err = m.src.GetNext(m.k.ctx, prefix, lastFile)
+	filename, err = m.k.src.GetNext(m.k.ctx, prefix, lastFile)
 	switch err {
 	case nil:
 	case io.EOF:
-		err = m.sleep(m.opts.EndOfResultsDelay)
+		err = m.sleep(m.k.opts.EndOfResultsDelay)
 		return
 
 	default:

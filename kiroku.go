@@ -54,6 +54,12 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 		return
 	}
 
+	// Initialize Meta
+	if err = k.initMeta(); err != nil {
+		err = fmt.Errorf("error initializing meta: %v", err)
+		return
+	}
+
 	if !k.opts.AvoidImportOnInit {
 		if err = k.syncWithSource(); err != nil {
 			err = fmt.Errorf("error encountered while syncing with source: %v", err)
@@ -66,12 +72,6 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 		if err = k.handleRemaining("chunk", k.merge); err != nil {
 			return
 		}
-	}
-
-	// Initialize Meta
-	if err = k.initMeta(); err != nil {
-		err = fmt.Errorf("error initializing meta: %v", err)
-		return
 	}
 
 	// Increment jobs waiter
