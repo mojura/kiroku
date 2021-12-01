@@ -134,7 +134,6 @@ func (m *Mirror) getNextFile() (nextFile string, err error) {
 func (m *Mirror) update(lastFile string) (filename string, err error) {
 	prefix := m.k.opts.Name + "."
 	filename, err = m.k.src.GetNext(m.k.ctx, prefix, lastFile)
-	m.out.Notificationf("Updating: <%s> / <%s> / %v", lastFile, filename, err)
 
 	switch err {
 	case nil:
