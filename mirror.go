@@ -42,7 +42,13 @@ func NewMirrorWithContext(ctx context.Context, opts Options, src Source) (mp *Mi
 	m.out = scribe.New(scribePrefix)
 	m.ch = make(chan struct{}, 1)
 	m.swg.Add(1)
-	go m.scan()
+
+	var nextFile string
+	if nextFile, err = m.init(); err != nil {
+		return
+	}
+
+	go m.scan(nextFile)
 	mp = &m
 	return
 }
@@ -90,23 +96,41 @@ func (m *Mirror) Close() (err error) {
 	return
 }
 
-func (m *Mirror) scan() {
-	var (
-		lastFile string
-		err      error
-	)
-
-	defer m.swg.Done()
-
-	if lastFile, err = m.getNextFile(); err != nil {
-		m.out.Errorf("error getting last file: %v", err)
+func (m *Mirror) init() (nextFile string, err error) {
+	if nextFile, err = m.getNextFile(); err != nil {
+		err = fmt.Errorf("error getting last file: %v", err)
 		return
 	}
 
 	for !m.k.isClosed() {
-		if lastFile, err = m.update(lastFile); err != nil {
-			m.out.Errorf("error updating: %v", err)
+		nextFile, err = m.update(nextFile)
+		switch err {
+		case nil:
+		case io.EOF:
+			err = nil
 			return
+
+		default:
+			return
+		}
+	}
+
+	return
+}
+
+func (m *Mirror) scan(nextFile string) {
+	var err error
+	defer m.swg.Done()
+	for err == nil && !m.k.isClosed() {
+		nextFile, err = m.update(nextFile)
+		switch err {
+		case nil:
+		case io.EOF:
+			err = m.sleep(m.k.opts.EndOfResultsDelay)
+
+		default:
+			m.out.Errorf("error updating: %v", err)
+			err = m.sleep(m.k.opts.EndOfResultsDelay)
 		}
 	}
 }
@@ -139,7 +163,6 @@ func (m *Mirror) update(lastFile string) (filename string, err error) {
 	case nil:
 	case io.EOF:
 		filename = lastFile
-		err = m.sleep(m.k.opts.EndOfResultsDelay)
 		return
 
 	default:
@@ -147,10 +170,13 @@ func (m *Mirror) update(lastFile string) (filename string, err error) {
 		return
 	}
 
+	m.out.Notificationf("downloading <%s>", filename)
+
 	if err = m.k.downloadAndImport(filename); err != nil {
 		return
 	}
 
+	m.out.Notificationf("downloaded <%s>", filename)
 	m.notify()
 	return
 }
