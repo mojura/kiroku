@@ -727,7 +727,7 @@ func (k *Kiroku) getNextFile() (nextFile string, err error) {
 	}
 
 	var currentFile string
-	if meta.CreatedAt > 0 {
+	if meta.BlockCount > 0 {
 		currentFile = generateFilename(k.opts.Name, meta)
 	}
 
