@@ -151,7 +151,7 @@ func TestNew_with_invalid_merging_chunk_permissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedErr := fmt.Errorf("error encountered while merging: open %s: permission denied", "test_data/test.chunk.moj")
+	expectedErr := fmt.Errorf("error initializing meta: open %s: permission denied", "test_data/test.chunk.moj")
 
 	opts := MakeOptions("test_data", "test")
 	if k, err = New(opts, nil); k != nil {
