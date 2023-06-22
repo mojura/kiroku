@@ -11,6 +11,15 @@ import (
 	"strings"
 )
 
+func GenerateFilename(name, kind string, timestamp int64) string {
+	if timestamp == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%s.%d.%s.moj", name, timestamp, kind)
+
+}
+
 func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 	wfn := func(filename string, info os.FileInfo, ierr error) (err error) {
 		switch {
@@ -32,15 +41,6 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 	}
 
 	return
-}
-
-func generateFilename(name string, m Meta) string {
-	if m.CreatedAt == 0 {
-		return ""
-	}
-
-	return fmt.Sprintf("%s.%d.%s.moj", name, m.CreatedAt, m.getKind())
-
 }
 
 func parseFilename(filename string) (parsed filenameMeta, err error) {
