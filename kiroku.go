@@ -49,7 +49,7 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 	k.es = make(semaphore, 1)
 
 	// Initialize primary Chunk
-	if k.c, err = NewWriter(k.opts.Dir, k.opts.fullName()); err != nil {
+	if k.c, err = NewWriter(k.opts.Dir, k.opts.FullName()); err != nil {
 		err = fmt.Errorf("error initializing primary chunk: %v", err)
 		return
 	}
@@ -316,7 +316,7 @@ func (k *Kiroku) isWriterMatch(targetPrefix, filename string, info os.FileInfo) 
 	name := k.getTruncatedName(filename)
 
 	// Check to see if filename has the needed prefix
-	if !strings.HasPrefix(name, k.opts.fullName()+"."+targetPrefix) {
+	if !strings.HasPrefix(name, k.opts.FullName()+"."+targetPrefix) {
 		// We do not have a service match, return
 		return
 	}
@@ -344,7 +344,7 @@ func (k *Kiroku) sleep(d time.Duration) {
 
 func (k *Kiroku) rename(filename, targetPrefix string, unix int64) (err error) {
 	// Set the new name
-	newName := fmt.Sprintf("%s.%s.%d.moj", k.opts.fullName(), targetPrefix, unix)
+	newName := fmt.Sprintf("%s.%s.%d.moj", k.opts.FullName(), targetPrefix, unix)
 	// Set filename as directory and name joined
 	newFilename := path.Join(k.opts.Dir, newName)
 
@@ -453,7 +453,7 @@ func (k *Kiroku) export(filename string) (err error) {
 		m := r.Meta()
 		// Create the export filename using the service name and the created at value
 		// of the current chunk.
-		exportFilename := m.generateFilename(k.opts.fullName())
+		exportFilename := m.generateFilename(k.opts.FullName())
 		// Get underlying io.ReadSeeker from Reader
 		rs := r.ReadSeeker()
 		// Seek to beginning of the file
@@ -473,7 +473,7 @@ func (k *Kiroku) export(filename string) (err error) {
 		}
 
 		// Everything below pertains only to snapshot chunks
-		snapshotFilename := getSnapshotName(k.opts.fullName())
+		snapshotFilename := getSnapshotName(k.opts.FullName())
 		body := strings.NewReader(exportFilename)
 		if err = k.src.Export(context.Background(), snapshotFilename, body); err != nil {
 			return
@@ -528,7 +528,7 @@ func (k *Kiroku) transaction(fn func(*Writer) error) (err error) {
 	// Get Unix nano value from timestamp
 	unix := now.UnixNano()
 	// Set name of chunk with temporary prefix
-	name := fmt.Sprintf("%s.tmp.chunk.%d", k.opts.fullName(), unix)
+	name := fmt.Sprintf("%s.tmp.chunk.%d", k.opts.FullName(), unix)
 
 	var w *Writer
 	// Initialize a new chunk Writer
@@ -640,7 +640,7 @@ func (k *Kiroku) syncWithSource() (err error) {
 		return
 	}
 
-	prefix := k.opts.fullName() + "."
+	prefix := k.opts.FullName() + "."
 	for nextFile, err := k.getInitialSyncFile(); err == nil; nextFile, err = k.syncWithFile(prefix, nextFile) {
 	}
 
@@ -701,7 +701,7 @@ func (k *Kiroku) getInitialSyncFile() (nextFile string, err error) {
 }
 
 func (k *Kiroku) getLatestSnapshotFilename() (filename string, err error) {
-	snapshotFilename := getSnapshotName(k.opts.fullName())
+	snapshotFilename := getSnapshotName(k.opts.FullName())
 	err = k.src.Get(k.ctx, snapshotFilename, func(r io.Reader) (err error) {
 		buf := bytes.NewBuffer(nil)
 		_, err = io.Copy(buf, r)
@@ -729,8 +729,8 @@ func (k *Kiroku) getNextFile() (nextFile string, err error) {
 
 	var currentFile string
 	if meta.BlockCount > 0 {
-		currentFile = meta.generateFilename(k.opts.fullName())
+		currentFile = meta.generateFilename(k.opts.FullName())
 	}
 
-	return k.src.GetNext(k.ctx, k.opts.fullName()+".", currentFile)
+	return k.src.GetNext(k.ctx, k.opts.FullName()+".", currentFile)
 }
