@@ -1,6 +1,7 @@
 package kiroku
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hatchify/errors"
@@ -27,8 +28,9 @@ func MakeOptions(dir, name string) (o Options) {
 
 // Options represent Kiroku options
 type Options struct {
-	Dir  string `toml:"dir" json:"dir"`
-	Name string `toml:"name" json:"name"`
+	Dir       string `toml:"dir" json:"dir"`
+	Name      string `toml:"name" json:"name"`
+	Namespace string `toml:"namespace" json:"namespace"`
 
 	AvoidImportOnInit  bool `toml:"avoid_import_on_init" json:"avoidImportOnInit"`
 	AvoidMergeOnInit   bool `toml:"avoid_merge_on_init" json:"avoidMergeOnInit"`
@@ -60,4 +62,12 @@ func (o *Options) fill() {
 	if o.EndOfResultsDelay == 0 {
 		o.EndOfResultsDelay = DefaultEndOfResultsDelay
 	}
+}
+
+func (o *Options) fullName() string {
+	if len(o.Namespace) == 0 {
+		return o.Name
+	}
+
+	return fmt.Sprintf("%s_%s", o.Name, o.Namespace)
 }
