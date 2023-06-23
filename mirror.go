@@ -156,7 +156,7 @@ func (m *Mirror) getNextFile() (nextFile string, err error) {
 }
 
 func (m *Mirror) update(lastFile string) (filename string, err error) {
-	prefix := m.k.opts.fullName() + "."
+	prefix := m.k.opts.FullName() + "."
 	filename, err = m.k.src.GetNext(m.k.ctx, prefix, lastFile)
 
 	switch err {

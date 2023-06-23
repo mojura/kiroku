@@ -58,16 +58,16 @@ func (o *Options) Validate() (err error) {
 	return errs.Err()
 }
 
-func (o *Options) fill() {
-	if o.EndOfResultsDelay == 0 {
-		o.EndOfResultsDelay = DefaultEndOfResultsDelay
-	}
-}
-
-func (o *Options) fullName() string {
+func (o *Options) FullName() string {
 	if len(o.Namespace) == 0 {
 		return o.Name
 	}
 
-	return fmt.Sprintf("%s_%s", o.Name, o.Namespace)
+	return fmt.Sprintf("%s_%s", o.Namespace, o.Name)
+}
+
+func (o *Options) fill() {
+	if o.EndOfResultsDelay == 0 {
+		o.EndOfResultsDelay = DefaultEndOfResultsDelay
+	}
 }
