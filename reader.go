@@ -128,7 +128,7 @@ func (r *Reader) ReadSeeker() io.ReadSeeker {
 }
 
 func (r *Reader) getEnd(f File) (end int64, err error) {
-	if end, err = f.Seek(0, os.SEEK_END); err != nil {
+	if end, err = f.Seek(0, io.SeekEnd); err != nil {
 		return
 	}
 

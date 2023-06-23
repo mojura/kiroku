@@ -2,6 +2,7 @@ package kiroku
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -60,7 +61,7 @@ func NewWriterWithFile(f *os.File) (wp *Writer, err error) {
 	}
 
 	// Move to the end of the file
-	if _, err = w.f.Seek(0, os.SEEK_END); err != nil {
+	if _, err = w.f.Seek(0, io.SeekEnd); err != nil {
 		return
 	}
 

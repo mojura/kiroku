@@ -450,9 +450,10 @@ func (k *Kiroku) export(filename string) (err error) {
 
 	// Read file and call Exporter.Export
 	if err = Read(filename, func(r *Reader) (err error) {
+		m := r.Meta()
 		// Create the export filename using the service name and the created at value
 		// of the current chunk.
-		exportFilename := generateFilename(k.opts.fullName(), r.Meta())
+		exportFilename := m.generateFilename(k.opts.fullName())
 		// Get underlying io.ReadSeeker from Reader
 		rs := r.ReadSeeker()
 		// Seek to beginning of the file
@@ -728,7 +729,7 @@ func (k *Kiroku) getNextFile() (nextFile string, err error) {
 
 	var currentFile string
 	if meta.BlockCount > 0 {
-		currentFile = generateFilename(k.opts.fullName(), meta)
+		currentFile = meta.generateFilename(k.opts.fullName())
 	}
 
 	return k.src.GetNext(k.ctx, k.opts.fullName()+".", currentFile)

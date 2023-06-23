@@ -70,6 +70,10 @@ func (m *Meta) merge(in *Meta) {
 	*m = mm
 }
 
+func (m *Meta) generateFilename(name string) string {
+	return GenerateFilename(name, m.getKind(), m.CreatedAt)
+}
+
 func (m *Meta) getKind() string {
 	if m.LastSnapshotAt == m.CreatedAt {
 		return "snapshot"
