@@ -69,7 +69,7 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 
 	if !k.opts.AvoidMergeOnInit {
 		// Options do not request avoiding merge on initialization, merge remaining chunks
-		if err = k.handleRemaining("chunk", k.merge); err != nil {
+		if err = k.handleRemaining("chunk", k.onChunk); err != nil {
 			return
 		}
 	}
@@ -77,9 +77,8 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err
 	// Increment jobs waiter
 	k.jobs.Add(2)
 	// Initialize watch job
-	go k.watch("chunk", k.ms, k.merge)
-	go k.watch("merged", k.es, k.exportAndRemove)
-
+	go k.watch("chunk", k.ms, k.onChunk)
+	go k.watch("merged", k.es, k.onMerge)
 	// Associate returning pointer to created Kiroku
 	kp = &k
 	return
@@ -205,12 +204,12 @@ func (k *Kiroku) Close() (err error) {
 	var errs errors.ErrorList
 	if !k.opts.AvoidMergeOnClose {
 		// Options do not request avoiding merge on close, merge remaining chunks
-		errs.Push(k.handleRemaining("chunk", k.merge))
+		errs.Push(k.handleRemaining("chunk", k.onChunk))
 	}
 
 	if !k.opts.AvoidExportOnClose {
 		// Options do not request avoiding merge on close, process remaining merged chunks
-		errs.Push(k.handleRemaining("merged", k.exportAndRemove))
+		errs.Push(k.handleRemaining("merged", k.onMerge))
 	}
 
 	// Close primary chunk
@@ -422,7 +421,7 @@ func (k *Kiroku) handleRemaining(targetPrefix string, fn func(filename string) e
 	}
 }
 
-func (k *Kiroku) merge(filename string) (err error) {
+func (k *Kiroku) onChunk(filename string) (err error) {
 	// Set current Unix timestamp
 	unix := time.Now().UnixNano()
 
@@ -488,18 +487,25 @@ func (k *Kiroku) export(filename string) (err error) {
 	return
 }
 
+func (k *Kiroku) onMerge(filename string) (err error) {
+	if !k.opts.IsMirror {
+		return k.exportAndRemove(filename)
+	}
+
+	return k.remove(filename)
+}
+
 func (k *Kiroku) exportAndRemove(filename string) (err error) {
 	// Export file
 	if err = k.export(filename); err != nil {
 		return
 	}
 
-	// Remove file
-	if err = os.Remove(filename); err != nil {
-		return
-	}
+	return k.remove(filename)
+}
 
-	return
+func (k *Kiroku) remove(filename string) (err error) {
+	return os.Remove(filename)
 }
 
 func (k *Kiroku) deleteChunk(w *Writer) (err error) {
