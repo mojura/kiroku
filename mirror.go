@@ -97,8 +97,11 @@ func (m *Mirror) Close() (err error) {
 }
 
 func (m *Mirror) init() (nextFile string, err error) {
-	if nextFile, err = m.getNextFile(); err != nil {
-		err = fmt.Errorf("error getting last file: %v", err)
+	nextFile, err = m.k.getNextFile()
+	switch err {
+	case nil:
+	case io.EOF:
+	default:
 		return
 	}
 
@@ -133,26 +136,6 @@ func (m *Mirror) scan(nextFile string) {
 			err = m.sleep(m.k.opts.EndOfResultsDelay)
 		}
 	}
-}
-
-func (m *Mirror) getNextFile() (nextFile string, err error) {
-	for err == nil {
-		if nextFile, err = m.k.getNextFile(); err == io.EOF {
-			err = m.sleep(m.k.opts.EndOfResultsDelay)
-		}
-
-		switch err {
-		case nil:
-			return
-		case io.EOF:
-			err = m.sleep(m.k.opts.EndOfResultsDelay)
-
-		default:
-			return
-		}
-	}
-
-	return
 }
 
 func (m *Mirror) update(lastFile string) (filename string, err error) {
