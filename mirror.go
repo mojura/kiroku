@@ -103,6 +103,7 @@ func (m *Mirror) init() (nextFile string, err error) {
 	case nil:
 	case io.EOF:
 	default:
+		err = fmt.Errorf("error getting next file: %v", err)
 		return
 	}
 

@@ -64,7 +64,7 @@ func TestNewMirror(t *testing.T) {
 			dir:           "test_data",
 			name:          "tester",
 			src:           newErrorSource(errors.New("foobar")),
-			expectedError: fmt.Errorf("error getting last file: %s", "foobar"),
+			expectedError: fmt.Errorf("error getting next file: %s", "foobar"),
 		},
 	}
 
