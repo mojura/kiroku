@@ -37,6 +37,7 @@ type Options struct {
 	AvoidMergeOnClose  bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
 	AvoidExportOnClose bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
 
+	IsMirror bool `toml:"is_mirror" json:"isMirror"`
 	// EndOfResultsDelay represents the amount of time to wait before pulling "Next" after
 	// receiving empty results (Default is 10 seconds).
 	// Note: This is only used for Mirrors
