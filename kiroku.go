@@ -421,26 +421,6 @@ func (k *Kiroku) handleRemaining(targetPrefix string, fn func(filename string) e
 	}
 }
 
-func (k *Kiroku) onChunk(filename string) (err error) {
-	// Set current Unix timestamp
-	unix := time.Now().UnixNano()
-
-	// Read file and merge into primary chunk
-	if err = Read(filename, k.c.Merge); err != nil {
-		err = fmt.Errorf("error encountered while merging: %v", err)
-		return
-	}
-
-	// Rename chunk to merged
-	if err = k.rename(filename, "merged", unix); err != nil {
-		return
-	}
-
-	// Send signal to exporting semaphore
-	k.es.send()
-	return
-}
-
 func (k *Kiroku) export(filename string) (err error) {
 	if !k.hasSource {
 		// Exporter not set, return
@@ -487,14 +467,6 @@ func (k *Kiroku) export(filename string) (err error) {
 	return
 }
 
-func (k *Kiroku) onMerge(filename string) (err error) {
-	if !k.opts.IsMirror {
-		return k.exportAndRemove(filename)
-	}
-
-	return k.remove(filename)
-}
-
 func (k *Kiroku) exportAndRemove(filename string) (err error) {
 	// Export file
 	if err = k.export(filename); err != nil {
@@ -505,6 +477,7 @@ func (k *Kiroku) exportAndRemove(filename string) (err error) {
 }
 
 func (k *Kiroku) remove(filename string) (err error) {
+	k.onUpdate(filename)
 	return os.Remove(filename)
 }
 
@@ -726,17 +699,68 @@ func (k *Kiroku) getLatestSnapshotFilename() (filename string, err error) {
 	return
 }
 
-func (k *Kiroku) getNextFile() (nextFile string, err error) {
+func (k *Kiroku) getCurrentFile() (currentFile string, err error) {
 	var meta Meta
 	if meta, err = k.Meta(); err != nil {
 		err = fmt.Errorf("error getting Meta: %v", err)
 		return
 	}
 
+	if meta.BlockCount == 0 {
+		return
+	}
+
+	currentFile = meta.generateFilename(k.opts.FullName())
+	return
+}
+
+func (k *Kiroku) getNextFile() (nextFile string, err error) {
 	var currentFile string
-	if meta.BlockCount > 0 {
-		currentFile = meta.generateFilename(k.opts.FullName())
+	if currentFile, err = k.getCurrentFile(); err != nil {
+		return
 	}
 
 	return k.src.GetNext(k.ctx, k.opts.FullName()+".", currentFile)
+}
+
+func (k *Kiroku) onUpdate(filename string) {
+	if k.opts.OnUpdate == nil {
+		return
+	}
+
+	// Read file and call Exporter.Export
+	if err := Read(filename, func(r *Reader) (err error) {
+		k.opts.OnUpdate(r)
+		return
+	}); err != nil {
+		k.out.Errorf("error encountered while calling onUpdate handler: %v", err)
+	}
+}
+
+func (k *Kiroku) onMerge(filename string) (err error) {
+	if !k.opts.IsMirror {
+		return k.exportAndRemove(filename)
+	}
+
+	return k.remove(filename)
+}
+
+func (k *Kiroku) onChunk(filename string) (err error) {
+	// Set current Unix timestamp
+	unix := time.Now().UnixNano()
+
+	// Read file and merge into primary chunk
+	if err = Read(filename, k.c.Merge); err != nil {
+		err = fmt.Errorf("error encountered while merging: %v", err)
+		return
+	}
+
+	// Rename chunk to merged
+	if err = k.rename(filename, "merged", unix); err != nil {
+		return
+	}
+
+	// Send signal to exporting semaphore
+	k.es.send()
+	return
 }
