@@ -42,6 +42,9 @@ type Options struct {
 	// receiving empty results (Default is 10 seconds).
 	// Note: This is only used for Mirrors
 	EndOfResultsDelay time.Duration `toml:"end_of_results_delay" json:"endOfResultsDelay"`
+
+	// Event handlers
+	OnUpdate func(*Reader)
 }
 
 // Validate ensures that the Options have all the required fields set
