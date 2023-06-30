@@ -44,12 +44,7 @@ func NewMirrorWithContext(ctx context.Context, opts Options, src Source) (mp *Mi
 	m.ch = make(chan struct{}, 1)
 	m.swg.Add(1)
 
-	var nextFile string
-	if nextFile, err = m.init(); err != nil {
-		return
-	}
-
-	go m.scan(nextFile)
+	go m.scan()
 	mp = &m
 	return
 }
@@ -97,35 +92,18 @@ func (m *Mirror) Close() (err error) {
 	return
 }
 
-func (m *Mirror) init() (nextFile string, err error) {
-	nextFile, err = m.k.getNextFile()
-	switch err {
-	case nil:
-	case io.EOF:
-	default:
-		err = fmt.Errorf("error getting next file: %v", err)
+func (m *Mirror) scan() {
+	var (
+		nextFile string
+		err      error
+	)
+
+	defer m.swg.Done()
+	if nextFile, err = m.k.getCurrentFile(); err != nil {
+		m.out.Errorf("Mirror.scan(): error getting current file: %v", err)
 		return
 	}
 
-	for !m.k.isClosed() {
-		nextFile, err = m.update(nextFile)
-		switch err {
-		case nil:
-		case io.EOF:
-			err = nil
-			return
-
-		default:
-			return
-		}
-	}
-
-	return
-}
-
-func (m *Mirror) scan(nextFile string) {
-	var err error
-	defer m.swg.Done()
 	for err == nil && !m.k.isClosed() {
 		nextFile, err = m.update(nextFile)
 		switch err {
@@ -134,7 +112,7 @@ func (m *Mirror) scan(nextFile string) {
 			err = m.sleep(m.k.opts.EndOfResultsDelay)
 
 		default:
-			m.out.Errorf("error updating: %v", err)
+			m.out.Errorf("Mirror.scan(): error updating: %v", err)
 			err = m.sleep(m.k.opts.EndOfResultsDelay)
 		}
 	}
