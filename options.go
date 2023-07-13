@@ -38,13 +38,22 @@ type Options struct {
 	AvoidExportOnClose bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
 
 	IsMirror bool `toml:"is_mirror" json:"isMirror"`
-	// EndOfResultsDelay represents the amount of time to wait before pulling "Next" after
-	// receiving empty results (Default is 10 seconds).
-	// Note: This is only used for Mirrors
-	EndOfResultsDelay time.Duration `toml:"end_of_results_delay" json:"endOfResultsDelay"`
 
 	// Event handlers
 	OnUpdate func(*Reader)
+
+	// Note: The below fields are only used for Mirrors
+
+	// EndOfResultsDelay represents the amount of time to wait before pulling "Next" after
+	// receiving empty results (Default is 10 seconds).
+	EndOfResultsDelay time.Duration `toml:"end_of_results_delay" json:"endOfResultsDelay"`
+
+	// RangeStart will determine the moment in time from which syncs will begin
+	RangeStart time.Time `toml:"range_start" json:"rangeStart"`
+	// RangeEnd will determine the moment in time from which syncs will end
+	// Note: This feature is slated to be implemented within the following
+	// release. As of now, this will act as a field placeholder
+	RangeEnd time.Time `toml:"range_end" json:"rangeEnd"`
 }
 
 // Validate ensures that the Options have all the required fields set
