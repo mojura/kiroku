@@ -61,10 +61,11 @@ func TestNewMirror(t *testing.T) {
 			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: permission denied`, "test_data/invalid_perms.moj"),
 		},
 		{
-			dir:           "test_data",
-			name:          "tester",
-			src:           newErrorSource(errors.New("foobar")),
-			expectedError: fmt.Errorf("error getting next file: %s", "foobar"),
+			dir:  "test_data",
+			name: "tester",
+			src:  newErrorSource(errors.New("foobar")),
+			// Network/source based errors do not cause initialization to fail
+			expectedError: nil,
 		},
 	}
 
