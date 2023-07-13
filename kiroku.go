@@ -706,7 +706,12 @@ func (k *Kiroku) getCurrentFile() (currentFile string, err error) {
 		return
 	}
 
-	if meta.BlockCount == 0 {
+	switch {
+	case meta.BlockCount > 0:
+	case k.opts.IsMirror && !k.opts.RangeStart.IsZero():
+		meta.CreatedAt = k.opts.RangeStart.UnixNano()
+
+	default:
 		return
 	}
 
