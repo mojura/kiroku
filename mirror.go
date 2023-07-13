@@ -99,7 +99,7 @@ func (m *Mirror) scan() {
 	)
 
 	defer m.swg.Done()
-	if nextFile, err = m.k.getCurrentFile(); err != nil {
+	if nextFile, err = m.k.getCurrentFilename(); err != nil {
 		m.out.Errorf("Mirror.scan(): error getting current file: %v", err)
 		return
 	}
@@ -113,7 +113,7 @@ func (m *Mirror) scan() {
 
 		default:
 			m.out.Errorf("Mirror.scan(): error updating: %v", err)
-			err = m.sleep(m.k.opts.EndOfResultsDelay)
+			err = m.sleep(m.k.opts.ErrorDelay)
 		}
 	}
 }

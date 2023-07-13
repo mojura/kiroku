@@ -28,6 +28,10 @@ func New(o Options, src Source) (kp *Kiroku, err error) {
 // NewWithContext will initialize a new Kiroku instance with a provided context.Context
 // Note: Processor and Options are optional
 func NewWithContext(ctx context.Context, o Options, src Source) (kp *Kiroku, err error) {
+	if err = o.Validate(); err != nil {
+		return
+	}
+
 	var k Kiroku
 	// Set output prefix
 	prefix := fmt.Sprintf("Kiroku (%v)", o.Name)
@@ -699,14 +703,19 @@ func (k *Kiroku) getLatestSnapshotFilename() (filename string, err error) {
 	return
 }
 
-func (k *Kiroku) getCurrentFile() (currentFile string, err error) {
+func (k *Kiroku) getCurrentFilename() (currentFile string, err error) {
 	var meta Meta
 	if meta, err = k.Meta(); err != nil {
 		err = fmt.Errorf("error getting Meta: %v", err)
 		return
 	}
 
-	if meta.BlockCount == 0 {
+	switch {
+	case meta.BlockCount > 0:
+	case k.opts.IsMirror && !k.opts.RangeStart.IsZero():
+		meta.CreatedAt = k.opts.RangeStart.UnixNano()
+
+	default:
 		return
 	}
 
@@ -716,7 +725,7 @@ func (k *Kiroku) getCurrentFile() (currentFile string, err error) {
 
 func (k *Kiroku) getNextFile() (nextFile string, err error) {
 	var currentFile string
-	if currentFile, err = k.getCurrentFile(); err != nil {
+	if currentFile, err = k.getCurrentFilename(); err != nil {
 		return
 	}
 
