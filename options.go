@@ -19,6 +19,8 @@ const (
 	DefaultEndOfResultsDelay = time.Second * 10
 	// DefaultErrorDelay is the default value for ErrorDelay
 	DefaultErrorDelay = time.Second * 30
+	// DefaultBatchDuration is the default value for BatchDuration
+	DefaultBatchDuration = time.Second * 10
 )
 
 // MakeOptions will create new Options
@@ -52,6 +54,9 @@ type Options struct {
 	// ErrorDelay represents the amount of time to wait before pulling "Next" after
 	// receiving an error
 	ErrorDelay time.Duration `toml:"error_delay" json:"errorDelay"`
+	// BatchDuration represents the amount of time to keep a transaction open for a
+	// Batch operation
+	BatchDuration time.Duration `toml:"batch_duration" json:"batchDuration"`
 
 	// RangeStart will determine the moment in time from which syncs will begin
 	RangeStart time.Time `toml:"range_start" json:"rangeStart"`
@@ -91,5 +96,9 @@ func (o *Options) fill() {
 
 	if o.ErrorDelay == 0 {
 		o.ErrorDelay = DefaultErrorDelay
+	}
+
+	if o.BatchDuration == 0 {
+		o.BatchDuration = DefaultBatchDuration
 	}
 }
