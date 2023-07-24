@@ -45,7 +45,6 @@ func NewProducerWithContext(ctx context.Context, o Options, src Source) (pp *Pro
 	// Set source state
 	p.hasSource = !isNilSource(src)
 	// Initialize semaphores
-	p.ms = make(semaphore, 1)
 	p.es = make(semaphore, 1)
 
 	// Initialize primary Chunk
@@ -54,13 +53,12 @@ func NewProducerWithContext(ctx context.Context, o Options, src Source) (pp *Pro
 		return
 	}
 
-	p.b = newBatcher(00, p.Transaction)
+	p.b = newBatcher(p.opts.BatchDuration, p.Transaction)
 
 	// Increment jobs waiter
-	p.jobs.Add(2)
+	p.jobs.Add(1)
 	// Initialize watch job
-	go p.watch("chunk", p.ms, p.onChunk)
-	go p.watch("merged", p.es, p.onMerge)
+	go p.watch("chunk", p.es, p.exportAndRemove)
 	// Associate returning pointer to created Producer
 	pp = &p
 	return
@@ -82,8 +80,6 @@ type Producer struct {
 	// Goroutine job waiter
 	jobs sync.WaitGroup
 
-	// Merging semaphore
-	ms semaphore
 	// Exporting semaphore
 	es semaphore
 
@@ -157,12 +153,7 @@ func (p *Producer) Close() (err error) {
 	var errs errors.ErrorList
 	if !p.opts.AvoidMergeOnClose {
 		// Options do not request avoiding merge on close, merge remaining chunks
-		errs.Push(p.handleRemaining("chunk", p.onChunk))
-	}
-
-	if !p.opts.AvoidExportOnClose {
-		// Options do not request avoiding merge on close, process remaining merged chunks
-		errs.Push(p.handleRemaining("merged", p.onMerge))
+		errs.Push(p.handleRemaining("chunk", p.exportAndRemove))
 	}
 
 	// Close primary chunk
@@ -430,10 +421,10 @@ func (p *Producer) transaction(fn func(*Writer) error) (err error) {
 		return
 	}
 
-	return p.importWriter(w)
+	return p.toChunk(w)
 }
 
-func (p *Producer) importWriter(w *Writer) (err error) {
+func (p *Producer) toChunk(w *Writer) (err error) {
 	// Close transaction chunk
 	if err = w.Close(); err != nil {
 		err = fmt.Errorf("error closing chunk: %v", err)
@@ -446,34 +437,6 @@ func (p *Producer) importWriter(w *Writer) (err error) {
 	}
 
 	// Send signal to merge watcher
-	p.ms.send()
-	return
-}
-
-func (p *Producer) onChunk(filename string) (err error) {
-	// Set current Unix timestamp
-	unix := time.Now().UnixNano()
-
-	// Read file and merge into primary chunk
-	if err = Read(filename, p.c.Merge); err != nil {
-		err = fmt.Errorf("error encountered while merging: %v", err)
-		return
-	}
-
-	// Rename chunk to merged
-	if err = p.rename(filename, "merged", unix); err != nil {
-		return
-	}
-
-	// Send signal to exporting semaphore
 	p.es.send()
 	return
-}
-
-func (p *Producer) onMerge(filename string) (err error) {
-	if !p.opts.IsMirror {
-		return p.exportAndRemove(filename)
-	}
-
-	return p.remove(filename)
 }
