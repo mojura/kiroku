@@ -392,7 +392,7 @@ func (p *Producer) transaction(fn func(*Writer) error) (err error) {
 	// Get Unix nano value from timestamp
 	unix := now.UnixNano()
 	// Set name of chunk with temporary prefix
-	name := fmt.Sprintf("%s.tmp.chunp.%d", p.opts.FullName(), unix)
+	name := fmt.Sprintf("%s.tmp.chunk.%d", p.opts.FullName(), unix)
 
 	var w *Writer
 	// Initialize a new chunk Writer
