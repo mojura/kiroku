@@ -568,19 +568,32 @@ func (k *Kiroku) importWriter(w *Writer) (err error) {
 
 func (k *Kiroku) download(filename string) (f *os.File, err error) {
 	filepath := path.Join(k.opts.Dir, filename)
-	if f, err = os.Create(filepath); err != nil {
+	tmpFilepath := path.Join(os.TempDir(), "_downloading."+filename)
+	if f, err = os.Create(tmpFilepath); err != nil {
 		err = fmt.Errorf("error creating chunk: %v", err)
 		return
 	}
 
 	// TODO: Polish this all up
 	if err = k.src.Import(k.ctx, filename, f); err != nil {
+		f.Close()
+		os.Remove(tmpFilepath)
 		err = fmt.Errorf("error downloading from source: %v", err)
 		return
 	}
 
-	if _, err = f.Seek(0, 0); err != nil {
-		err = fmt.Errorf("error seeking to beginning of chunk: %v", err)
+	if err = f.Close(); err != nil {
+		err = fmt.Errorf("error closing temporary file: %v", err)
+		return
+	}
+
+	if err = os.Rename(tmpFilepath, filepath); err != nil {
+		err = fmt.Errorf("error renaming temporary file: %v", err)
+		return
+	}
+
+	if f, err = os.Open(filename); err != nil {
+		err = fmt.Errorf("error opening downloaded file: %v", err)
 		return
 	}
 
