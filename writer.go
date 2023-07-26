@@ -230,6 +230,7 @@ func (w *Writer) setSize() (err error) {
 func (w *Writer) mapMeta() (err error) {
 	// Ensure underlying file is big enough for Meta bytes
 	if err = w.setSize(); err != nil {
+		err = fmt.Errorf("error setting file size: %v", err)
 		return
 	}
 
