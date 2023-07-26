@@ -20,3 +20,5 @@ func (t *Transaction) AddBlock(typ Type, key, value []byte) (err error) {
 func (t *Transaction) Meta() (m Meta) {
 	return t.w.Meta()
 }
+
+type TransactionFn func(*Transaction) error
