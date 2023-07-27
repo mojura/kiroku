@@ -77,7 +77,6 @@ func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
 		// Decode next block
 		if err = rdr.Decode(&b); err != nil {
 			// Error encountered while decoding, break out of the loop
-			err = fmt.Errorf("error decoding block: %v", err)
 			break
 		}
 
@@ -95,6 +94,7 @@ func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
 		return nil
 
 	default:
+		err = fmt.Errorf("error decoding block: %v", err)
 		return
 	}
 }
