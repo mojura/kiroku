@@ -12,13 +12,8 @@ type Transaction struct {
 }
 
 // AddBlock will add a row
-func (t *Transaction) AddBlock(typ Type, key, value []byte) (err error) {
-	return t.w.AddBlock(typ, key, value)
-}
-
-// AddBlock will add a row
-func (t *Transaction) Meta() (m Meta) {
-	return t.w.Meta()
+func (t *Transaction) Write(value []byte) (err error) {
+	return t.w.Write(value)
 }
 
 type TransactionFn func(*Transaction) error

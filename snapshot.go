@@ -2,7 +2,6 @@ package kiroku
 
 func newSnapshot(w *Writer) *Snapshot {
 	var s Snapshot
-	w.initSnapshot()
 	s.w = w
 	return &s
 }
@@ -13,6 +12,6 @@ type Snapshot struct {
 }
 
 // Write will add a write block to a writer
-func (s *Snapshot) Write(key, value []byte) (err error) {
-	return s.w.AddBlock(TypeWriteAction, key, value)
+func (s *Snapshot) Write(value []byte) (err error) {
+	return s.w.Write(value)
 }
