@@ -1,52 +1,69 @@
 package kiroku
 
-import "fmt"
-
-const (
-	// TypeUnset represents an unset block type
-	TypeUnset Type = iota
-	// TypeWriteAction represents a write action block
-	TypeWriteAction
-	// TypeDeleteAction represets a delete action block
-	TypeDeleteAction
-	// TypeComment represents a comment block
-	TypeComment
+import (
+	"encoding/json"
+	"fmt"
 )
 
-const invalidTypeLayout = "invalid type, <%d> is not supported"
+const (
+	TypeChunk Type = iota
+	TypeSnapshot
+)
 
-// Type represents a block type
-type Type uint8
-
-// Validate will ensure a type is valid
-func (t Type) Validate() (err error) {
-	switch t {
-	case TypeWriteAction:
-	case TypeDeleteAction:
-	case TypeComment:
-
+func parseType(str string) (t Type, err error) {
+	switch str {
+	case "chunk":
+		t = TypeChunk
+	case "snapshot":
+		t = TypeSnapshot
 	default:
-		// Currently set as an unsupported type, return error
-		return fmt.Errorf(invalidTypeLayout, t)
+		err = fmt.Errorf("type of <%s> is not supported", str)
 	}
 
 	return
 }
 
-// Validate will ensure a type is valid
-func (t Type) String() string {
+type Type uint8
+
+func (t Type) Validate() (err error) {
 	switch t {
-	case TypeUnset:
-		return "unset"
-	case TypeWriteAction:
-		return "write"
-	case TypeDeleteAction:
-		return "delete"
-	case TypeComment:
-		return "comment"
+	case TypeChunk:
+	case TypeSnapshot:
 
 	default:
-		// Currently st as an unsupported type, return error
-		return "invalid"
+		return fmt.Errorf("invalid filetype, <%s> is not supported", t)
 	}
+
+	return
+}
+
+func (t Type) String() (out string) {
+	switch t {
+	case TypeChunk:
+		return "chunk"
+	case TypeSnapshot:
+		return "snapshot"
+
+	default:
+		return fmt.Sprintf("INVALID<%v>", t)
+	}
+}
+
+func (t Type) MarshalJSON() (bs []byte, err error) {
+	return json.Marshal(t.String())
+}
+
+func (t *Type) UnmarshalJSON(bs []byte) (err error) {
+	var str string
+	if err = json.Unmarshal(bs, &str); err != nil {
+		return
+	}
+
+	var val Type
+	if val, err = parseType(str); err != nil {
+		return
+	}
+
+	*t = val
+	return
 }
