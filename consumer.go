@@ -31,6 +31,10 @@ func NewConsumer(opts Options, src Source, onUpdate func(*Reader) error) (mp *Co
 // NewConsumerWithContext will initialize a new Consumer instance with a provided context.Context
 func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (ref *Consumer, err error) {
 	var c Consumer
+	if c.m, err = newMappedMeta(opts); err != nil {
+		return
+	}
+
 	scribePrefix := fmt.Sprintf("Kiroku [%s] (Consumer)", opts.Name)
 	c.ctx, c.close = context.WithCancel(ctx)
 	c.out = scribe.New(scribePrefix)
@@ -49,12 +53,10 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 // Consumer represents a read-only instance of historical DB entries
 // Note: The mirror is updated through it's Importer
 type Consumer struct {
-	mux sync.RWMutex
-
 	ctx   context.Context
 	close func()
 
-	m Meta
+	m *mappedMeta
 
 	out *scribe.Scribe
 	w   *watcher
@@ -69,17 +71,7 @@ type Consumer struct {
 
 // Meta will return a copy of the current Meta
 func (c *Consumer) Meta() (meta Meta, err error) {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
-	meta = c.m
-	return
-}
-
-func (c *Consumer) setMeta(meta Meta) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-	c.m.LastProcessedTimestamp = meta.LastProcessedTimestamp
-	c.m.LastProcessedType = meta.LastProcessedType
+	meta = c.m.Get()
 	return
 }
 
@@ -221,7 +213,7 @@ func (c *Consumer) download(filename string) (err error) {
 		return
 	}
 
-	c.setMeta(fnm.toMeta())
+	c.m.Set(fnm.toMeta())
 	c.w.trigger()
 	return
 }
