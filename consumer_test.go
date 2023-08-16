@@ -11,11 +11,11 @@ import (
 	"github.com/hatchify/errors"
 )
 
-var testMirror *Mirror
+var testConsumer *Consumer
 
-func TestNewMirror(t *testing.T) {
+func TestNewConsumer(t *testing.T) {
 	var (
-		m   *Mirror
+		m   *Consumer
 		err error
 	)
 
@@ -25,7 +25,7 @@ func TestNewMirror(t *testing.T) {
 	defer os.RemoveAll("./test_data")
 
 	var invalidPerms *os.File
-	if invalidPerms, err = os.OpenFile("./test_data/invalid_perms.moj", os.O_CREATE|os.O_RDWR, 0511); err != nil {
+	if invalidPerms, err = os.OpenFile("./test_data/invalid_perms.kir", os.O_CREATE|os.O_RDWR, 0511); err != nil {
 		t.Fatal(err)
 	}
 
@@ -52,13 +52,13 @@ func TestNewMirror(t *testing.T) {
 			dir:           "invalid_dir",
 			name:          "tester",
 			src:           newErrorSource(io.EOF),
-			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: no such file or directory`, "invalid_dir/tester.moj"),
+			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: no such file or directory`, "invalid_dir/tester.kir"),
 		},
 		{
 			dir:           "test_data",
 			name:          "invalid_perms",
 			src:           newErrorSource(io.EOF),
-			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: permission denied`, "test_data/invalid_perms.moj"),
+			expectedError: fmt.Errorf(`error initializing primary chunk: open %s: permission denied`, "test_data/invalid_perms.kir"),
 		},
 		{
 			dir:  "test_data",
@@ -71,7 +71,7 @@ func TestNewMirror(t *testing.T) {
 
 	for _, tc := range tcs {
 		opts := MakeOptions(tc.dir, tc.name)
-		m, err = NewMirror(opts, tc.src)
+		m, err = NewConsumer(opts, tc.src, nil)
 		if err = compareErrors(tc.expectedError, err); err != nil {
 			t.Fatal(err)
 		}
@@ -89,9 +89,9 @@ func TestNewMirror(t *testing.T) {
 	}
 }
 
-func TestMirror_Filename(t *testing.T) {
+func TestConsumer_Filename(t *testing.T) {
 	var (
-		m   *Mirror
+		m   *Consumer
 		err error
 	)
 
@@ -100,7 +100,7 @@ func TestMirror_Filename(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 	opts := MakeOptions("test_data", "tester")
-	if m, err = NewMirror(opts, newErrorSource(io.EOF)); err != nil {
+	if m, err = NewConsumer(opts, newErrorSource(io.EOF), nil); err != nil {
 		t.Fatal(err)
 	}
 	defer m.Close()
@@ -110,46 +110,14 @@ func TestMirror_Filename(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if filename != "test_data/tester.moj" {
-		t.Fatalf("invalid filename, expected <%s and received <%s>", "test_data/tester.moj", filename)
+	if filename != "test_data/tester.kir" {
+		t.Fatalf("invalid filename, expected <%s and received <%s>", "test_data/tester.kir", filename)
 	}
 }
 
-func TestMirror_Meta(t *testing.T) {
+func TestConsumer_Close(t *testing.T) {
 	var (
-		m   *Mirror
-		err error
-	)
-
-	if err = os.Mkdir("test_data", 0744); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll("./test_data")
-	opts := MakeOptions("test_data", "tester")
-	if m, err = NewMirror(opts, newErrorSource(io.EOF)); err != nil {
-		t.Fatal(err)
-	}
-	defer m.Close()
-	if err = m.k.Transaction(func(t *Transaction) (err error) {
-		return t.AddBlock(TypeWriteAction, []byte("testKey"), []byte("hello world!"))
-	}); err != nil {
-		t.Fatal(err)
-		return
-	}
-
-	var meta Meta
-	meta, err = m.Meta()
-	switch {
-	case err != nil:
-	case meta.isEmpty():
-		t.Fatal("found empty meta when non empty was expected")
-		return
-	}
-}
-
-func TestMirror_Close(t *testing.T) {
-	var (
-		m   *Mirror
+		m   *Consumer
 		err error
 	)
 
@@ -159,7 +127,7 @@ func TestMirror_Close(t *testing.T) {
 	defer os.RemoveAll("./test_data")
 
 	opts := MakeOptions("test_data", "test")
-	if m, err = NewMirror(opts, newErrorSource(io.EOF)); err != nil {
+	if m, err = NewConsumer(opts, newErrorSource(io.EOF), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -183,10 +151,10 @@ func TestMirror_Close(t *testing.T) {
 	}
 }
 
-func ExampleNewMirror() {
+func ExampleNewConsumer() {
 	var err error
 	opts := MakeOptions("./test_data", "tester")
-	if testMirror, err = NewMirror(opts, newErrorSource(io.EOF)); err != nil {
+	if testConsumer, err = NewConsumer(opts, newErrorSource(io.EOF), nil); err != nil {
 		log.Fatal(err)
 		return
 	}
