@@ -11,16 +11,7 @@ import (
 // NewReader will initialize a new chunk reader
 func NewReader(f File) (rp *Reader, err error) {
 	var r Reader
-	if r.m, err = newMetaFromReader(f); err != nil {
-		return
-	}
-
-	var end int64
-	if end, err = r.getEnd(f); err != nil {
-		return
-	}
-
-	r.r = io.NewSectionReader(f, 0, end)
+	r.r = f
 	rp = &r
 	return
 }
@@ -48,14 +39,7 @@ func Read(filename string, p Processor) (err error) {
 
 // Reader will parse and read a history chunk
 type Reader struct {
-	m Meta
 	r io.ReadSeeker
-}
-
-// Meta will return the meta information for the chunk
-func (r *Reader) Meta() Meta {
-	// Return a copy of the underlying Meta
-	return r.m
 }
 
 // ForEach will iterate through all the blocks within the reader
@@ -126,16 +110,4 @@ func (r *Reader) CopyBlocks(destination io.Writer) (n int64, err error) {
 // ReadSeeker will return the Reader's underlying ReadSeeker
 func (r *Reader) ReadSeeker() io.ReadSeeker {
 	return r.r
-}
-
-func (r *Reader) getEnd(f File) (end int64, err error) {
-	if end, err = f.Seek(0, io.SeekEnd); err != nil {
-		return
-	}
-
-	if end > r.m.TotalBlockSize+metaSize {
-		end = r.m.TotalBlockSize + metaSize
-	}
-
-	return
 }
