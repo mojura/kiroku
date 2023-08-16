@@ -101,7 +101,7 @@ func ExampleNewReader() {
 		err error
 	)
 
-	if f, err = os.Open("filename.moj"); err != nil {
+	if f, err = os.Open("filename.kir"); err != nil {
 		log.Fatalf("error opening: %v", err)
 		return
 	}
@@ -143,7 +143,7 @@ func ExampleReader_Copy() {
 		err error
 	)
 
-	if f, err = os.Create("chunk.copy.moj"); err != nil {
+	if f, err = os.Create("chunk.copy.kir"); err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -163,7 +163,7 @@ func ExampleReader_CopyBlocks() {
 		err error
 	)
 
-	if f, err = os.Create("chunk.blocksOnly.copy.moj"); err != nil {
+	if f, err = os.Create("chunk.blocksOnly.copy.kir"); err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -179,7 +179,7 @@ func ExampleReader_CopyBlocks() {
 ```go
 func ExampleRead() {
 	var err error
-	if err = Read("filename.moj", func(r *Reader) (err error) {
+	if err = Read("filename.kir", func(r *Reader) (err error) {
 		var m Meta
 		m = testReader.Meta()
 		fmt.Println("Meta!", m)
