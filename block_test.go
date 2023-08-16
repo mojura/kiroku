@@ -2,188 +2,71 @@ package kiroku
 
 import (
 	"bytes"
-	"io"
+	"reflect"
 	"testing"
 
-	"github.com/hatchify/errors"
 	"github.com/mojura/enkodo"
 )
 
+func TestBlock_Marshal_Unmarshal_Enkodo(t *testing.T) {
+	type args struct {
+		enc *enkodo.Encoder
+	}
+
+	type testcase struct {
+		name    string
+		b       Block
+		args    args
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name:    "basic",
+			b:       Block("hello world"),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			enc := enkodo.NewWriter(buf)
+			if err := enc.Encode(tt.b); (err != nil) != tt.wantErr {
+				t.Errorf("enkodo.Encoder.Encode() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			dec := enkodo.NewReader(buf)
+
+			var got Block
+			if err := dec.Decode(&got); (err != nil) != tt.wantErr {
+				t.Errorf("enkodo.Decoder.Decode() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !reflect.DeepEqual(tt.b, got) {
+				t.Errorf("invalid value: got = %v, want %v", string(got), string(tt.b))
+			}
+		})
+	}
+}
+
 func TestBlock_MarshalEnkodo(t *testing.T) {
-	var b Block
-	b.Type = TypeComment
-	b.Key = []byte("testKey")
-	b.Value = []byte("this is a fun comment")
-
-	buf := bytes.NewBuffer(nil)
-
-	var err error
-	if err = enkodo.NewWriter(buf).Encode(&b); err != nil {
-		t.Fatal(err)
+	type args struct {
+		enc *enkodo.Encoder
 	}
-}
-
-func TestBlock_MarshalEnkodo_with_error(t *testing.T) {
-	var b Block
-	b.Type = TypeComment
-	b.Key = []byte("testKey")
-	b.Value = []byte("this is a fun comment")
-
-	tcs := []countWriter{
-		{
-			count: 1,
-			err:   io.EOF,
-		},
-		{
-			count: 2,
-			err:   io.EOF,
-		},
-		{
-			count: 3,
-			err:   io.EOF,
-		},
-		{
-			count: 4,
-			err:   nil,
-		},
+	tests := []struct {
+		name    string
+		b       Block
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
 	}
-
-	for _, tc := range tcs {
-		if err := enkodo.NewWriter(&tc).Encode(&b); err != tc.err {
-			t.Fatalf("invalid error, expected <%v> and received <%v>", tc.err, err)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.b.MarshalEnkodo(tt.args.enc); (err != nil) != tt.wantErr {
+				t.Errorf("Block.MarshalEnkodo() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
-}
-
-func TestBlock_UnmarshalEnkodo(t *testing.T) {
-	tcs := []Block{
-		{
-			Type:  TypeComment,
-			Value: []byte("this is a fun comment"),
-		},
-		{
-			Type:  TypeWriteAction,
-			Key:   []byte("key1"),
-			Value: []byte("Write #1"),
-		},
-		{
-			Type:  TypeWriteAction,
-			Key:   []byte("key2"),
-			Value: []byte("Write #2"),
-		},
-		{
-			Key:  []byte("key2"),
-			Type: TypeDeleteAction,
-		},
-	}
-
-	var err error
-	for _, b := range tcs {
-		buf := bytes.NewBuffer(nil)
-		if err = enkodo.NewWriter(buf).Encode(&b); err != nil {
-			t.Fatal(err)
-		}
-
-		var decoded Block
-		if err = enkodo.NewReader(buf).Decode(&decoded); err != nil {
-			t.Fatal(err)
-		}
-
-		switch {
-		case decoded.Type != b.Type:
-			t.Fatalf("invalid type, expected %v and received %v", b.Type, decoded.Type)
-		case !bytes.Equal(decoded.Key, b.Key):
-			t.Fatalf("invalid key, expected %v and received %v", string(b.Key), string(decoded.Key))
-		case !bytes.Equal(decoded.Value, b.Value):
-			t.Fatalf("invalid value, expected %v and received %v", string(b.Value), string(decoded.Value))
-		}
-	}
-}
-
-func TestBlock_UnmarshalEnkodo_with_errors(t *testing.T) {
-	var b Block
-	b.Type = TypeWriteAction
-	b.Key = []byte("key")
-	b.Value = []byte("value")
-
-	buf := bytes.NewBuffer(nil)
-	if err := enkodo.NewWriter(buf).Encode(&b); err != nil {
-		t.Fatal(err)
-	}
-
-	targetErr := errors.Error("foo bar!")
-	tcs := []countReader{
-		{
-			r:     bytes.NewReader(buf.Bytes()),
-			count: 1,
-			err:   targetErr,
-		},
-		{
-			r:     bytes.NewReader(buf.Bytes()),
-			count: 2,
-			err:   targetErr,
-		},
-		{
-			r:     bytes.NewReader(buf.Bytes()),
-			count: 3,
-			err:   targetErr,
-		},
-		{
-			r:     bytes.NewReader(buf.Bytes()),
-			count: 4,
-			err:   targetErr,
-		},
-	}
-
-	for i, tc := range tcs {
-		err := enkodo.NewReader(&tc).Decode(&b)
-		if err = compareErrors(tc.err, err); err != nil {
-			t.Fatalf("%v (test case #%d", err, i)
-		}
-	}
-}
-
-type countWriter struct {
-	n     int
-	count int
-
-	err error
-}
-
-func (w *countWriter) Write(bs []byte) (n int, err error) {
-	if w.n++; w.n >= w.count {
-		err = w.err
-		return
-	}
-
-	n = len(bs)
-	return
-}
-
-type countReader struct {
-	r *bytes.Reader
-
-	n     int
-	count int
-
-	err error
-}
-
-func (r *countReader) Read(bs []byte) (n int, err error) {
-	if r.n++; r.n >= r.count {
-		err = r.err
-		return
-	}
-
-	n, err = r.r.Read(bs)
-	return
-}
-
-func (r *countReader) ReadByte() (b byte, err error) {
-	if r.n++; r.n >= r.count {
-		err = r.err
-		return
-	}
-
-	return r.r.ReadByte()
 }
