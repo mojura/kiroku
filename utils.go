@@ -1,24 +1,15 @@
 package kiroku
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
-	"strings"
+	"time"
 )
-
-func GenerateFilename(name, kind string, timestamp int64) string {
-	if timestamp == 0 {
-		return ""
-	}
-
-	return fmt.Sprintf("%s.%d.%s.moj", name, timestamp, kind)
-
-}
 
 func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 	wfn := func(filename string, info os.FileInfo, ierr error) (err error) {
@@ -41,28 +32,6 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 	}
 
 	return
-}
-
-func parseFilename(filename string) (parsed filenameMeta, err error) {
-	spl := strings.Split(filename, ".")
-	if len(spl) != 4 {
-		err = fmt.Errorf("invalid number of filename parts, expected 4 and received %d", len(spl))
-		return
-	}
-
-	if parsed.createdAt, err = strconv.ParseInt(spl[1], 10, 64); err != nil {
-		return
-	}
-
-	parsed.name = spl[0]
-	parsed.kind = spl[2]
-	return
-}
-
-type filenameMeta struct {
-	name      string
-	kind      string
-	createdAt int64
 }
 
 func removeFile(f fs.File, dir string) (err error) {
@@ -105,4 +74,36 @@ func isNilSource(s Source) (isNil bool) {
 	}
 
 	return false
+}
+
+func isClosed(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		// Context done channel is closed, return true
+		return true
+	default:
+		// Context done channel is not closed, return false
+		return false
+	}
+}
+
+func sleep(ctx context.Context, sleepDuration time.Duration) (err error) {
+	timer := time.NewTimer(sleepDuration)
+	select {
+	case <-ctx.Done():
+		timer.Stop()
+		return ctx.Err()
+	case <-timer.C:
+	}
+
+	return
+}
+
+func wasCreatedAfter(filename string, timestamp int64) (after bool, err error) {
+	var parsed Filename
+	if parsed, err = parseFilename(filename); err != nil {
+		return
+	}
+
+	return timestamp < parsed.createdAt, nil
 }
