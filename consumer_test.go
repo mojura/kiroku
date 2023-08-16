@@ -89,32 +89,6 @@ func TestNewConsumer(t *testing.T) {
 	}
 }
 
-func TestConsumer_Filename(t *testing.T) {
-	var (
-		m   *Consumer
-		err error
-	)
-
-	if err = os.Mkdir("test_data", 0744); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll("./test_data")
-	opts := MakeOptions("test_data", "tester")
-	if m, err = NewConsumer(opts, newErrorSource(io.EOF), nil); err != nil {
-		t.Fatal(err)
-	}
-	defer m.Close()
-
-	var filename string
-	if filename, err = m.Filename(); err != nil {
-		t.Fatal(err)
-	}
-
-	if filename != "test_data/tester.kir" {
-		t.Fatalf("invalid filename, expected <%s and received <%s>", "test_data/tester.kir", filename)
-	}
-}
-
 func TestConsumer_Close(t *testing.T) {
 	var (
 		m   *Consumer

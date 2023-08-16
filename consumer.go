@@ -51,19 +51,19 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 type Consumer struct {
 	mux sync.RWMutex
 
-	out   *scribe.Scribe
 	ctx   context.Context
 	close func()
 
-	name string
-	opts Options
-	src  Source
+	m Meta
 
+	out *scribe.Scribe
+	w   *watcher
+
+	name     string
+	opts     Options
+	src      Source
 	onUpdate func(*Reader) error
 
-	w *watcher
-
-	m   Meta
 	swg sync.WaitGroup
 }
 
@@ -81,20 +81,6 @@ func (c *Consumer) setMeta(meta Meta) {
 	c.m.LastProcessedTimestamp = meta.LastProcessedTimestamp
 	c.m.LastProcessedType = meta.LastProcessedType
 	return
-}
-
-// Filename returns the filename of the primary chunk
-func (c *Consumer) Filename() (filename string, err error) {
-
-	return
-}
-
-func (c *Consumer) Transaction(fn func(*Transaction) error) (err error) {
-	return ErrConsumerNilSource
-}
-
-func (c *Consumer) Snapshot(fn func(*Snapshot) error) (err error) {
-	return ErrConsumerSnapshot
 }
 
 // Close will close the selected instance of Kiroku
