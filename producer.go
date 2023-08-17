@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,7 +47,7 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Producer, e
 	// Set source state
 	p.hasSource = !isNilSource(src)
 
-	p.w = newWatcher(p.ctx, o, p.out, "merged", p.exportAndRemove)
+	p.w = newWatcher(p.ctx, o, p.out, "chunk", p.exportAndRemove)
 	p.b = newBatcher(p.opts.BatchDuration, p.Transaction)
 	kp = &p
 	return
@@ -90,7 +91,7 @@ func (p *Producer) Transaction(fn TransactionFn) (err error) {
 		return fn(txn)
 	}
 
-	return p.transaction(txnFn)
+	return p.transaction(TypeChunk, txnFn)
 }
 
 // Snapshot will engage a new history snapshot
@@ -110,7 +111,7 @@ func (p *Producer) Snapshot(fn func(*Snapshot) error) (err error) {
 		return fn(ss)
 	}
 
-	return p.transaction(txnFn)
+	return p.transaction(TypeSnapshot, txnFn)
 }
 
 // Batch will engage a new history batch transaction
@@ -120,7 +121,7 @@ func (p *Producer) Batch(fn BatchFn) (err error) {
 
 // Batch will engage a new history batch transaction
 func (p *Producer) BatchBlock(value []byte) (err error) {
-	berr := p.b.Batch(func(txn *Transaction) {
+	berr := p.Batch(func(txn *Transaction) {
 		err = txn.Write(value)
 	})
 
@@ -175,40 +176,47 @@ func (p *Producer) rename(f Filename, t Type) (err error) {
 	return
 }
 
-func (p *Producer) export(filename string) (err error) {
+func (p *Producer) export(filename Filename) (err error) {
 	if !p.hasSource {
 		// Exporter not set, return
 		return
 	}
 
 	var f *os.File
-	if f, err = os.Open(filename); err != nil {
+	filepath := path.Join(p.opts.Dir, filename.String())
+	if f, err = os.Open(filepath); err != nil {
 		err = fmt.Errorf("error opening <%s>: %v", filename, err)
 		return
 	}
 	defer f.Close()
 
-	var exportFilename Filename
-	if exportFilename, err = parseFilename(filename); err != nil {
-		err = fmt.Errorf("error parsing file <%s>: %v", filename, err)
+	if err = p.src.Export(context.Background(), filename.String(), f); err != nil {
+		err = fmt.Errorf("error exporting <%s>: %v", filename.String(), err)
 		return
 	}
 
-	if err = p.src.Export(context.Background(), exportFilename.String(), f); err != nil {
-		err = fmt.Errorf("error exporting <%s>: %v", exportFilename.String(), err)
+	if filename.filetype != TypeSnapshot {
+		return
+	}
+
+	rdr := strings.NewReader(filename.String())
+	snapshotName := getSnapshotName(p.opts.FullName())
+	if err = p.src.Export(context.Background(), snapshotName, rdr); err != nil {
+		err = fmt.Errorf("error setting latest snapshot: %v", err)
 		return
 	}
 
 	return
 }
 
-func (p *Producer) exportAndRemove(filename string) (err error) {
+func (p *Producer) exportAndRemove(f Filename) (err error) {
 	// Export file
-	if err = p.export(filename); err != nil {
+	if err = p.export(f); err != nil {
 		return
 	}
 
-	return os.Remove(filename)
+	filepath := path.Join(p.opts.Dir, f.String())
+	return os.Remove(filepath)
 }
 
 func (p *Producer) deleteChunk(w *Writer) (err error) {
@@ -220,7 +228,7 @@ func (p *Producer) deleteChunk(w *Writer) (err error) {
 	return errs.Err()
 }
 
-func (p *Producer) transaction(fn func(*Writer) error) (err error) {
+func (p *Producer) transaction(t Type, fn func(*Writer) error) (err error) {
 
 	// Get current timestamp
 	now := time.Now()
@@ -254,7 +262,7 @@ func (p *Producer) transaction(fn func(*Writer) error) (err error) {
 	}
 
 	// Rename to chunk with
-	if err = p.rename(w.filename, TypeChunk); err != nil {
+	if err = p.rename(w.filename, t); err != nil {
 		return
 	}
 

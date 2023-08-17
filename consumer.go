@@ -247,14 +247,15 @@ func (c *Consumer) downloadTemp(filename string) (tmpFilepath string, err error)
 	return
 }
 
-func (c *Consumer) onChunk(filename string) (err error) {
+func (c *Consumer) onChunk(filename Filename) (err error) {
 	// Process chunk
-	if err = Read(filename, c.onUpdate); err != nil {
+	filepath := path.Join(c.opts.Dir, filename.String())
+	if err = Read(filepath, c.onUpdate); err != nil {
 		err = fmt.Errorf("error encountered while processing: %v", err)
 		return
 	}
 
-	if err = os.Remove(filename); err != nil {
+	if err = os.Remove(filepath); err != nil {
 		err = fmt.Errorf("error encountered while removing processed file <%s>: %v", filename, err)
 		return
 	}

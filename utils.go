@@ -31,6 +31,7 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 
 	return
 }
+
 func getSnapshotName(name string) string {
 	return fmt.Sprintf("_latestSnapshots/%s.txt", name)
 }

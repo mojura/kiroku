@@ -11,7 +11,7 @@ import (
 	"github.com/gdbu/scribe"
 )
 
-func newWatcher(ctx context.Context, opts Options, out *scribe.Scribe, targetPrefix string, onTrigger func(string) error) *watcher {
+func newWatcher(ctx context.Context, opts Options, out *scribe.Scribe, targetPrefix string, onTrigger func(Filename) error) *watcher {
 	var w watcher
 	w.ctx = ctx
 	w.opts = opts
@@ -34,7 +34,7 @@ type watcher struct {
 	// Output logger
 	out *scribe.Scribe
 
-	onTrigger func(string) error
+	onTrigger func(Filename) error
 
 	// Merging semaphore
 	s semaphore
@@ -80,7 +80,7 @@ func (w *watcher) processAll(targetPrefix string) (err error) {
 //   - No more matches are found
 //   - Watcher has been closed
 func (w *watcher) process(targetPrefix string) (ok bool, err error) {
-	var filename string
+	var filename Filename
 	// Get next file for the target prefix
 	if filename, ok, err = w.getNext(targetPrefix); err != nil {
 		err = fmt.Errorf("error getting next %s filename: <%v>, sleeping for a minute and trying again", targetPrefix, err)
@@ -100,16 +100,21 @@ func (w *watcher) process(targetPrefix string) (ok bool, err error) {
 	return
 }
 
-func (w *watcher) getNext(targetPrefix string) (filename string, ok bool, err error) {
+func (w *watcher) getNext(targetPrefix string) (filename Filename, ok bool, err error) {
 	fn := func(iteratingName string, info os.FileInfo) (err error) {
+		truncated := w.getTruncatedName(iteratingName)
 		// Check to see if current file is a match for the current name and prefix
-		if !w.isWriterMatch(targetPrefix, iteratingName, info) {
+		if !w.isWriterMatch(targetPrefix, truncated, info) {
 			// This is not a match, return
 			return
 		}
 
 		// We found a match, set <filename> to the iterating name and set <ok> to true
-		filename = iteratingName
+		if filename, err = parseFilename(truncated); err != nil {
+			err = fmt.Errorf("error parsing <%s> as filename: %v", iteratingName, err)
+			return
+		}
+
 		ok = true
 		// Return break
 		return errBreak
@@ -126,11 +131,8 @@ func (w *watcher) isWriterMatch(targetPrefix, filename string, info os.FileInfo)
 		return
 	}
 
-	// Get truncated name
-	name := w.getTruncatedName(filename)
-
 	// Check to see if filename has the needed prefix
-	if !strings.HasPrefix(name, w.opts.FullName()+"."+targetPrefix) {
+	if !strings.HasPrefix(filename, w.opts.FullName()+"."+targetPrefix) {
 		// We do not have a service match, return
 		return
 	}
