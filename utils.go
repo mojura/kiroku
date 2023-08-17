@@ -3,8 +3,6 @@ package kiroku
 import (
 	"context"
 	"fmt"
-	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -33,28 +31,6 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 
 	return
 }
-
-func removeFile(f fs.File, dir string) (err error) {
-	var info fs.FileInfo
-	if info, err = f.Stat(); err != nil {
-		return
-	}
-
-	filename := filepath.Join(dir, info.Name())
-
-	if err = f.Close(); err != nil {
-		return
-	}
-
-	return os.Remove(filename)
-}
-
-type File interface {
-	io.Seeker
-	io.Reader
-	io.ReaderAt
-}
-
 func getSnapshotName(name string) string {
 	return fmt.Sprintf("_latestSnapshots/%s.txt", name)
 }
