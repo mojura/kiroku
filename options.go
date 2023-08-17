@@ -36,18 +36,17 @@ type Options struct {
 	Name      string `toml:"name" json:"name"`
 	Namespace string `toml:"namespace" json:"namespace"`
 
-	AvoidExportOnClose bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
+	AvoidExportOnClose  bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
+	AvoidProcessOnClose bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
+
 	// BatchDuration represents the amount of time to keep a transaction open for a
 	// Batch operation
 	BatchDuration time.Duration `toml:"batch_duration" json:"batchDuration"`
 
-	// Note: The below fields are only used for Mirrors
-
-	AvoidProcessOnClose bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
-
 	// EndOfResultsDelay represents the amount of time to wait before pulling "Next" after
 	// receiving empty results (Default is 10 seconds).
 	EndOfResultsDelay time.Duration `toml:"end_of_results_delay" json:"endOfResultsDelay"`
+
 	// ErrorDelay represents the amount of time to wait before pulling "Next" after
 	// receiving an error
 	ErrorDelay time.Duration `toml:"error_delay" json:"errorDelay"`
