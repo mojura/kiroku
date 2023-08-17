@@ -56,7 +56,6 @@ func (m *mappedMeta) Set(meta Meta) {
 	}
 
 	*m.m = meta
-	return
 }
 
 func (m *mappedMeta) Close() (err error) {
