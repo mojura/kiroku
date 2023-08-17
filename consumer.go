@@ -61,7 +61,6 @@ type Consumer struct {
 	out *scribe.Scribe
 	w   *watcher
 
-	name     string
 	opts     Options
 	src      Source
 	onUpdate func(*Reader) error
@@ -91,7 +90,7 @@ func (c *Consumer) scan() {
 	}
 
 	for err == nil && !isClosed(c.ctx) {
-		err = c.getNext()
+		err = c.sync()
 		switch err {
 		case nil:
 		case io.EOF:
@@ -102,6 +101,19 @@ func (c *Consumer) scan() {
 			err = sleep(c.ctx, c.opts.ErrorDelay)
 		}
 	}
+}
+
+func (c *Consumer) sync() (err error) {
+	if err = c.getLatestSnapshot(); err != nil {
+		err = fmt.Errorf("Consumer.sync(): error getting latest snapshot: %v", err)
+		return
+	}
+
+	for err == nil && !isClosed(c.ctx) {
+		err = c.getNext()
+	}
+
+	return
 }
 
 func (c *Consumer) getNext() (err error) {
@@ -118,7 +130,6 @@ func (c *Consumer) getNext() (err error) {
 	switch err {
 	case nil:
 	case io.EOF:
-		filename = lastFile.String()
 		return
 
 	default:
@@ -127,7 +138,7 @@ func (c *Consumer) getNext() (err error) {
 	}
 
 	if err = c.download(filename); err != nil {
-		err = fmt.Errorf("error downloading <%s>: %v", err)
+		err = fmt.Errorf("error downloading <%s>: %v", filename, err)
 		return
 	}
 
