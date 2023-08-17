@@ -31,6 +31,6 @@ func (m *Meta) merge(in *Meta) {
 	*m = mm
 }
 
-func (m *Meta) isEmpty() bool {
+func (m *Meta) IsEmpty() bool {
 	return *m == emptyMeta
 }
