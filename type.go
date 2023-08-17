@@ -8,6 +8,7 @@ import (
 const (
 	TypeChunk Type = iota
 	TypeSnapshot
+	TypeTemporary
 )
 
 func parseType(str string) (t Type, err error) {
@@ -16,6 +17,8 @@ func parseType(str string) (t Type, err error) {
 		t = TypeChunk
 	case "snapshot":
 		t = TypeSnapshot
+	case "tmp":
+		t = TypeTemporary
 	default:
 		err = fmt.Errorf("type of <%s> is not supported", str)
 	}
@@ -29,6 +32,7 @@ func (t Type) Validate() (err error) {
 	switch t {
 	case TypeChunk:
 	case TypeSnapshot:
+	case TypeTemporary:
 
 	default:
 		return fmt.Errorf("invalid filetype, <%s> is not supported", t)
@@ -43,9 +47,11 @@ func (t Type) String() (out string) {
 		return "chunk"
 	case TypeSnapshot:
 		return "snapshot"
+	case TypeTemporary:
+		return "tmp"
 
 	default:
-		return fmt.Sprintf("INVALID<%v>", t)
+		return fmt.Sprintf("INVALID<%d>", t)
 	}
 }
 
