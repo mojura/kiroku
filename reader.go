@@ -9,7 +9,7 @@ import (
 )
 
 // NewReader will initialize a new chunk reader
-func NewReader(f File) (rp *Reader, err error) {
+func NewReader(f File) (rp *Reader) {
 	var r Reader
 	r.r = f
 	rp = &r
@@ -26,13 +26,8 @@ func Read(filename string, p Processor) (err error) {
 	}
 	// Close file whenever the function ends
 	defer f.Close()
-
-	var r *Reader
 	// Initialize a new Reader utilizing the recently opened file
-	if r, err = NewReader(f); err != nil {
-		return
-	}
-
+	r := NewReader(f)
 	// Call provided Processor and return whatever error it produces
 	return p(r)
 }
@@ -43,11 +38,9 @@ type Reader struct {
 }
 
 // ForEach will iterate through all the blocks within the reader
-func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
-	seek += metaSize
-
+func (r *Reader) ForEach(seek int64, fn func(Block) error) (err error) {
 	// Seek to the first block byte
-	if _, err = r.r.Seek(seek, 0); err != nil {
+	if _, err = r.r.Seek(0, 0); err != nil {
 		err = fmt.Errorf("error seeking to first block byte: %v", err)
 		return
 	}
@@ -65,29 +58,22 @@ func (r *Reader) ForEach(seek int64, fn func(*Block) error) (err error) {
 		}
 
 		// Call provided function
-		if err = fn(&b); err != nil {
+		if err = fn(b); err != nil {
 			// Function returned an error, return
 			return
 		}
 	}
 
-	switch err {
-	case nil:
-		return nil
-	case io.EOF:
-		return nil
+	fmt.Println("Here", err)
 
-	default:
-		err = fmt.Errorf("error decoding block: %v", err)
-		return
-	}
+	return r.handleError(err)
 }
 
-// Copy will copy the entire chunk (meta + blocks)
+// Copy will copy the entire reader
 func (r *Reader) Copy(destination io.Writer) (n int64, err error) {
 	// Seek to the beginning of the file
 	if _, err = r.r.Seek(0, 0); err != nil {
-		err = fmt.Errorf("error seeking to first meta byte: %v", err)
+		err = fmt.Errorf("error seeking to first byte: %v", err)
 		return
 	}
 
@@ -95,19 +81,19 @@ func (r *Reader) Copy(destination io.Writer) (n int64, err error) {
 	return io.Copy(destination, r.r)
 }
 
-// CopyBlocks will copy the blocks only (no meta)
-func (r *Reader) CopyBlocks(destination io.Writer) (n int64, err error) {
-	// Seek to the beginning of the blocks
-	if _, err = r.r.Seek(metaSize, 0); err != nil {
-		err = fmt.Errorf("error seeking to first block byte: %v", err)
-		return
-	}
-
-	// Copy chunk blocks to destination writer
-	return io.Copy(destination, r.r)
-}
-
 // ReadSeeker will return the Reader's underlying ReadSeeker
 func (r *Reader) ReadSeeker() io.ReadSeeker {
 	return r.r
+}
+
+func (r *Reader) handleError(inbound error) (err error) {
+	switch inbound {
+	case nil:
+		return nil
+	case io.EOF:
+		return nil
+
+	default:
+		return fmt.Errorf("error decoding block: %v", inbound)
+	}
 }
