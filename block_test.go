@@ -9,14 +9,9 @@ import (
 )
 
 func TestBlock_Marshal_Unmarshal_Enkodo(t *testing.T) {
-	type args struct {
-		enc *enkodo.Encoder
-	}
-
 	type testcase struct {
 		name    string
 		b       Block
-		args    args
 		wantErr bool
 	}
 
