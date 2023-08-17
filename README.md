@@ -126,7 +126,7 @@ func ExampleReader_Meta() {
 ```go
 func ExampleReader_ForEach() {
 	var err error
-	if err = testReader.ForEach(0, func(b *Block) (err error) {
+	if err = testReader.ForEach(0, func(b Block) (err error) {
 		fmt.Println("Block data:", string(b.Value))
 		return
 	}); err != nil {
@@ -184,7 +184,7 @@ func ExampleRead() {
 		m = testReader.Meta()
 		fmt.Println("Meta!", m)
 
-		if err = r.ForEach(0, func(b *Block) (err error) {
+		if err = r.ForEach(0, func(b Block) (err error) {
 			fmt.Println("Block data:", string(b.Value))
 			return
 		}); err != nil {
