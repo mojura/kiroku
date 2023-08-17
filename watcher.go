@@ -2,6 +2,7 @@ package kiroku
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -46,43 +47,57 @@ type watcher struct {
 
 func (w *watcher) watch(targetPrefix string) {
 	var (
-		filename string
-
 		ok  bool
 		err error
 	)
 
+	// Decrement jobs waitgroup when func is done
+	defer w.jobs.Done()
 	// Iterate until Producer is closed
 	for !isClosed(w.ctx) {
-		// Get next file for the target prefix
-		if filename, ok, err = w.getNext(targetPrefix); err != nil {
-			// TODO: Get teams input on if this value should be configurable
-			w.out.Errorf("error getting next %s filename: <%v>, sleeping for a minute and trying again", targetPrefix, err)
+		if ok, err = w.process(targetPrefix); err != nil {
+			w.out.Error(err.Error())
 			w.sleep(time.Minute)
-			continue
 		}
 
 		if !ok {
-			// No match was found, wait for next signal
 			w.waitForNext()
-			continue
-		}
-
-		// Check to see if Producer has closed
-		if isClosed(w.ctx) {
-			break
-		}
-
-		// Call provided function
-		if err = w.onTrigger(filename); err != nil {
-			// TODO: Get teams input on the best course of action here
-			w.out.Errorf("error encountered during action for <%s>: <%v>, sleeping for a minute and trying again", filename, err)
-			w.sleep(time.Minute)
 		}
 	}
+}
 
-	// Decrement jobs waitgroup
-	w.jobs.Done()
+func (w *watcher) processAll(targetPrefix string) (err error) {
+	var ok bool
+	// Iterate until Producer is closed
+	for {
+		if ok, err = w.process(targetPrefix); !ok || err != nil {
+			return
+		}
+	}
+}
+
+// process will process matches until:
+//   - No more matches are found
+//   - Watcher has been closed
+func (w *watcher) process(targetPrefix string) (ok bool, err error) {
+	var filename string
+	// Get next file for the target prefix
+	if filename, ok, err = w.getNext(targetPrefix); err != nil {
+		err = fmt.Errorf("error getting next %s filename: <%v>, sleeping for a minute and trying again", targetPrefix, err)
+		return
+	}
+
+	if !ok {
+		return
+	}
+
+	// Call provided function
+	if err = w.onTrigger(filename); err != nil {
+		err = fmt.Errorf("error encountered during action for <%s>: <%v>, sleeping for a minute and trying again", filename, err)
+		return
+	}
+
+	return
 }
 
 func (w *watcher) getNext(targetPrefix string) (filename string, ok bool, err error) {
