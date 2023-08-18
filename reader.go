@@ -64,8 +64,6 @@ func (r *Reader) ForEach(seek int64, fn func(Block) error) (err error) {
 		}
 	}
 
-	fmt.Println("Here", err)
-
 	return r.handleError(err)
 }
 

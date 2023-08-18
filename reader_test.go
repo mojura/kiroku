@@ -2,7 +2,6 @@ package kiroku
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -184,7 +183,6 @@ func TestReader_ForEach(t *testing.T) {
 
 			r := NewReader(rdr)
 			err = r.ForEach(tt.args.seek, tt.args.fn)
-			fmt.Println(err, err == nil, err != nil, tt.wantErr)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Reader.ForEach() error = %v, wantErr %v", err, tt.wantErr)
 			}
