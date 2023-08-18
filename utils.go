@@ -84,3 +84,14 @@ func wasCreatedAfter(filename string, timestamp int64) (after bool, err error) {
 
 	return timestamp < parsed.createdAt, nil
 }
+
+func handleTwoErrors(a, b error) (err error) {
+	switch {
+	case a != nil:
+		return a
+	case b != nil:
+		return b
+	default:
+		return nil
+	}
+}
