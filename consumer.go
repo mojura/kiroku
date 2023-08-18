@@ -29,7 +29,31 @@ func NewConsumer(opts Options, src Source, onUpdate func(*Reader) error) (mp *Co
 }
 
 // NewConsumerWithContext will initialize a new Consumer instance with a provided context.Context
-func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (ref *Consumer, err error) {
+func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (c *Consumer, err error) {
+	if c, err = newConsumer(ctx, opts, src, onUpdate); err != nil {
+		return
+	}
+
+	c.swg.Add(1)
+	go c.scan()
+	return
+}
+
+// NewConsumerWithContext will initialize a new Consumer instance with a provided context.Context
+func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (err error) {
+	var c *Consumer
+	if c, err = newConsumer(ctx, opts, src, onUpdate); err != nil {
+		return
+	}
+
+	if err = c.oneShot(); err != nil {
+		return
+	}
+
+	return c.Close()
+}
+
+func newConsumer(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (ref *Consumer, err error) {
 	var c Consumer
 	if c.m, err = newMappedMeta(opts); err != nil {
 		return
@@ -39,13 +63,13 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 	c.ctx, c.close = context.WithCancel(ctx)
 	c.out = scribe.New(scribePrefix)
 
+	c.opts = opts
+	c.src = src
+
 	// Initialize semaphores
 	c.onUpdate = onUpdate
 
 	c.w = newWatcher(c.ctx, c.opts, c.out, "chunk", c.onChunk)
-	c.swg.Add(1)
-
-	go c.scan()
 	ref = &c
 	return
 }
@@ -70,12 +94,21 @@ type Consumer struct {
 
 // Meta will return a copy of the current Meta
 func (c *Consumer) Meta() (meta Meta, err error) {
+	if isClosed(c.ctx) {
+		err = errors.ErrIsClosed
+		return
+	}
+
 	meta = c.m.Get()
 	return
 }
 
 // Close will close the selected instance of Kiroku
 func (c *Consumer) Close() (err error) {
+	if isClosed(c.ctx) {
+		return errors.ErrIsClosed
+	}
+
 	c.close()
 	c.w.waitToComplete()
 	return
@@ -104,16 +137,20 @@ func (c *Consumer) scan() {
 }
 
 func (c *Consumer) sync() (err error) {
-	if err = c.getLatestSnapshot(); err != nil {
-		err = fmt.Errorf("Consumer.sync(): error getting latest snapshot: %v", err)
-		return
-	}
-
 	for err == nil && !isClosed(c.ctx) {
 		err = c.getNext()
 	}
 
 	return
+}
+
+func (c *Consumer) oneShot() (err error) {
+	if err = c.getLatestSnapshot(); err != nil {
+		err = fmt.Errorf("error getting latest snapshot: %v", err)
+		return
+	}
+
+	return c.sync()
 }
 
 func (c *Consumer) getNext() (err error) {
@@ -125,8 +162,10 @@ func (c *Consumer) getNext() (err error) {
 
 	var filename string
 	lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
+	fmt.Println("About to call getnext")
 	filename, err = c.src.GetNext(c.ctx, prefix, lastFile.String())
 
+	fmt.Printf("Last file <%s> / Next file <%s>\n", lastFile, filename)
 	switch err {
 	case nil:
 	case io.EOF:
@@ -139,6 +178,24 @@ func (c *Consumer) getNext() (err error) {
 
 	if err = c.download(filename); err != nil {
 		err = fmt.Errorf("error downloading <%s>: %v", filename, err)
+		return
+	}
+
+	return
+}
+
+func (c *Consumer) isAfter(latestSnapshot string) (after bool, err error) {
+	if len(latestSnapshot) == 0 {
+		return
+	}
+
+	var meta Meta
+	if meta, err = c.Meta(); err != nil {
+		return
+	}
+
+	if after, err = wasCreatedAfter(latestSnapshot, meta.LastProcessedTimestamp); err != nil {
+		err = fmt.Errorf("error determining if snapshot <%s> was created after %v: %v", latestSnapshot, meta.LastProcessedTimestamp, err)
 		return
 	}
 
@@ -158,18 +215,8 @@ func (c *Consumer) getLatestSnapshot() (err error) {
 		return
 	}
 
-	var meta Meta
-	if meta, err = c.Meta(); err != nil {
-		return
-	}
-
 	var after bool
-	if after, err = wasCreatedAfter(latestSnapshot, meta.LastProcessedTimestamp); err != nil {
-		err = fmt.Errorf("error determining if snapshot <%s> was created after %v: %v", latestSnapshot, meta.LastProcessedTimestamp, err)
-		return
-	}
-
-	if !after {
+	if after, err = c.isAfter(latestSnapshot); err != nil || !after {
 		return
 	}
 
@@ -197,6 +244,7 @@ func (c *Consumer) getLatestSnapshotFilename() (filename string, err error) {
 		}
 	})
 
+	fmt.Println("Get error", err)
 	return
 }
 

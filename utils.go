@@ -77,11 +77,6 @@ func sleep(ctx context.Context, sleepDuration time.Duration) (err error) {
 }
 
 func wasCreatedAfter(filename string, timestamp int64) (after bool, err error) {
-	if len(filename) == 0 {
-		after = true
-		return
-	}
-
 	var parsed Filename
 	if parsed, err = parseFilename(filename); err != nil {
 		return
