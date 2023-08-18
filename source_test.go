@@ -41,23 +41,3 @@ type exportFn func(ctx context.Context, filename string, r io.Reader) error
 type importFn func(ctx context.Context, filename string, w io.Writer) error
 type getFn func(ctx context.Context, filename string, fn func(io.Reader) error) error
 type getNextFn func(ctx context.Context, prefix, lastFilename string) (filename string, err error)
-
-func newErrorSource(srcErr error) *mockSource {
-	e := func(ctx context.Context, filename string, r io.Reader) (err error) {
-		return srcErr
-	}
-
-	i := func(ctx context.Context, filename string, w io.Writer) (err error) {
-		return srcErr
-	}
-
-	g := func(ctx context.Context, filename string, fn func(io.Reader) error) (err error) {
-		return srcErr
-	}
-
-	gn := func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
-		return "", srcErr
-	}
-
-	return newMockSource(e, i, g, gn)
-}
