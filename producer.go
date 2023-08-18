@@ -124,15 +124,7 @@ func (p *Producer) BatchBlock(value []byte) (err error) {
 	berr := p.Batch(func(txn *Transaction) {
 		err = txn.Write(value)
 	})
-
-	switch {
-	case err != nil:
-		return err
-	case berr != nil:
-		return berr
-	default:
-		return nil
-	}
+	return handleTwoErrors(berr, err)
 }
 
 // Close will close the selected instance of Producer
@@ -219,17 +211,7 @@ func (p *Producer) exportAndRemove(f Filename) (err error) {
 	return os.Remove(filepath)
 }
 
-func (p *Producer) deleteChunk(w *Writer) (err error) {
-	var errs errors.ErrorList
-	// Close target chunk
-	errs.Push(w.Close())
-	// Remove target chunk
-	errs.Push(os.Remove(w.filepath))
-	return errs.Err()
-}
-
 func (p *Producer) transaction(t Type, fn func(*Writer) error) (err error) {
-
 	// Get current timestamp
 	now := time.Now()
 	// Get Unix nano value from timestamp
@@ -244,19 +226,10 @@ func (p *Producer) transaction(t Type, fn func(*Writer) error) (err error) {
 	}
 
 	// Call provided function
-	if err = fn(w); err != nil {
-		// Error encountered, delete chunk!
-		if deleteErr := p.deleteChunk(w); deleteErr != nil {
-			// Error encountered while deleting chunk, leave error log to notify server manager
-			p.out.Errorf("error deleting chunk <%s>: %v", name, deleteErr)
-		}
 
-		// Return error from provided function
-		return
-	}
-
+	err = fn(w)
 	_ = w.Close()
-	if w.blockCount == 0 {
+	if err != nil || w.blockCount == 0 {
 		_ = os.Remove(w.filepath)
 		return
 	}
