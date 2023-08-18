@@ -1,8 +1,90 @@
 package kiroku
 
 import (
+	"reflect"
 	"testing"
 )
+
+func Test_parseFilename(t *testing.T) {
+	type args struct {
+		filename string
+	}
+
+	type testcase struct {
+		name       string
+		args       args
+		wantParsed Filename
+		wantErr    bool
+	}
+
+	tests := []testcase{
+		{
+			name: "basic",
+			args: args{
+				filename: "test.12345.snapshot.kir",
+			},
+			wantParsed: Filename{
+				name:      "test",
+				createdAt: 12345,
+				filetype:  TypeSnapshot,
+			},
+			wantErr: false,
+		},
+		{
+			name: "not enough parts",
+			args: args{
+				filename: "test.12345.kir",
+			},
+			wantParsed: Filename{},
+			wantErr:    true,
+		},
+		{
+			name: "invalid created at",
+			args: args{
+				filename: "test.foo.snapshot.kir",
+			},
+			wantParsed: Filename{},
+			wantErr:    true,
+		},
+		{
+			name: "error parsing filetype",
+			args: args{
+				filename: "test.12345.11.kir",
+			},
+			wantParsed: Filename{
+				name:      "test",
+				createdAt: 12345,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid filetype",
+			args: args{
+				filename: "test.12345.INVALID.kir",
+			},
+			wantParsed: Filename{
+				name:      "test",
+				createdAt: 12345,
+				filetype:  TypeInvalid,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotParsed, err := parseFilename(tt.args.filename)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseFilename() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !reflect.DeepEqual(gotParsed, tt.wantParsed) {
+				t.Errorf("parseFilename() = %v, want %v", gotParsed, tt.wantParsed)
+			}
+		})
+	}
+}
 
 func TestFilename_String(t *testing.T) {
 	type fields struct {

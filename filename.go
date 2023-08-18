@@ -29,10 +29,6 @@ func parseFilename(filename string) (parsed Filename, err error) {
 		return
 	}
 
-	if err = parsed.filetype.Validate(); err != nil {
-		return
-	}
-
 	return
 }
 
