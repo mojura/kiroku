@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	TypeChunk Type = iota
+	TypeInvalid Type = iota
+	TypeChunk
 	TypeSnapshot
 	TypeTemporary
 )
@@ -51,7 +52,7 @@ func (t Type) String() (out string) {
 		return "tmp"
 
 	default:
-		return fmt.Sprintf("INVALID<%d>", t)
+		return "INVALID"
 	}
 }
 
