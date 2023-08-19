@@ -39,6 +39,12 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 	return
 }
 
+// NewOneShotConsumer will initialize a new one-shot Consumer instance with a provided context.Context
+func NewOneShotConsumer(opts Options, src Source, onUpdate func(*Reader) error) (err error) {
+	ctx := context.Background()
+	return NewOneShotConsumerWithContext(ctx, opts, src, onUpdate)
+}
+
 // NewConsumerWithContext will initialize a new Consumer instance with a provided context.Context
 func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (err error) {
 	var c *Consumer
@@ -55,6 +61,10 @@ func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source
 
 func newConsumer(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (ref *Consumer, err error) {
 	var c Consumer
+	if err = opts.Validate(); err != nil {
+		return
+	}
+
 	if c.m, err = newMappedMeta(opts); err != nil {
 		return
 	}
@@ -105,12 +115,14 @@ func (c *Consumer) Meta() (meta Meta, err error) {
 
 // Close will close the selected instance of Kiroku
 func (c *Consumer) Close() (err error) {
+	// Always wait to complete
+	defer c.w.waitToComplete()
 	if isClosed(c.ctx) {
 		return errors.ErrIsClosed
 	}
 
 	c.close()
-	c.w.waitToComplete()
+
 	return
 }
 
@@ -124,6 +136,7 @@ func (c *Consumer) scan() {
 
 	for err == nil && !isClosed(c.ctx) {
 		err = c.sync()
+		fmt.Println("Sync err")
 		switch err {
 		case nil:
 		case io.EOF:
@@ -137,10 +150,12 @@ func (c *Consumer) scan() {
 }
 
 func (c *Consumer) sync() (err error) {
+	fmt.Println("Sync start")
 	for err == nil && !isClosed(c.ctx) {
 		err = c.getNext()
 	}
 
+	fmt.Println("Sync end")
 	return
 }
 
@@ -150,7 +165,15 @@ func (c *Consumer) oneShot() (err error) {
 		return
 	}
 
-	return c.sync()
+	err = c.sync()
+	switch err {
+	case nil:
+	case io.EOF:
+		err = nil
+	default:
+	}
+
+	return
 }
 
 func (c *Consumer) getNext() (err error) {
@@ -162,6 +185,7 @@ func (c *Consumer) getNext() (err error) {
 
 	var filename string
 	lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
+	fmt.Println("About to get next")
 	filename, err = c.src.GetNext(c.ctx, prefix, lastFile.String())
 	switch err {
 	case nil:
@@ -173,6 +197,7 @@ func (c *Consumer) getNext() (err error) {
 		return
 	}
 
+	fmt.Printf("About to download <%s>\n", filename)
 	if err = c.download(filename); err != nil {
 		err = fmt.Errorf("error downloading <%s>: %v", filename, err)
 		return

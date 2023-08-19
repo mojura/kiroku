@@ -19,6 +19,8 @@ func TestNewConsumer(t *testing.T) {
 		opts     Options
 		src      Source
 		onUpdate func(*Reader) error
+
+		avoidDirectory bool
 	}
 
 	type testcase struct {
@@ -44,17 +46,157 @@ func TestNewConsumer(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "avoid directory",
+			args: args{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+				onUpdate: func(r *Reader) (err error) {
+					return
+				},
+				avoidDirectory: true,
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := os.Mkdir(tt.args.opts.Dir, 0744); err != nil {
-				t.Fatal(err)
+			if !tt.args.avoidDirectory {
+				if err := os.Mkdir(tt.args.opts.Dir, 0744); err != nil {
+					t.Fatal(err)
+				}
+				defer os.RemoveAll(tt.args.opts.Dir)
 			}
-			defer os.RemoveAll(tt.args.opts.Dir)
 
 			c, err := NewConsumer(tt.args.opts, tt.args.src, tt.args.onUpdate)
-			defer func() { _ = c.Close() }()
+			if err == nil {
+				defer func() { _ = c.Close() }()
+			}
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewConsumer() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func TestNewOneShotConsumer(t *testing.T) {
+	type args struct {
+		opts     Options
+		src      Source
+		onUpdate func(*Reader) error
+
+		avoidDirectory bool
+	}
+
+	type testcase struct {
+		name    string
+		args    args
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name: "basic",
+			args: args{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func() getFn {
+						var count int
+						return func(ctx context.Context, filename string, fn func(io.Reader) error) error {
+							count++
+							if count < 2 {
+								return fn(strings.NewReader("test.12345.snapshot.kir"))
+							}
+
+							return fn(strings.NewReader("hello world"))
+						}
+
+					}(),
+					func() getNextFn {
+						var count int
+						return func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+							count++
+							if count < 2 {
+								return "test.12345.chunk.kir", nil
+							}
+
+							return "", io.EOF
+						}
+					}(),
+				),
+				onUpdate: func(r *Reader) (err error) {
+					return
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "avoid directory",
+			args: args{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+				onUpdate: func(r *Reader) (err error) {
+					return
+				},
+				avoidDirectory: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "error",
+			args: args{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error {
+						return errors.ErrIsClosed
+					},
+					func() getNextFn {
+						var count int
+						return func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+							count++
+							if count < 2 {
+								return "test.12345.chunk.kir", nil
+							}
+
+							return "", io.EOF
+						}
+					}(),
+				),
+				onUpdate: func(r *Reader) (err error) {
+					return
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !tt.args.avoidDirectory {
+				if err := os.Mkdir(tt.args.opts.Dir, 0744); err != nil {
+					t.Fatal(err)
+				}
+				defer os.RemoveAll(tt.args.opts.Dir)
+			}
+
+			err := NewOneShotConsumer(tt.args.opts, tt.args.src, tt.args.onUpdate)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewConsumer() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -835,6 +977,180 @@ func TestConsumer_download(t *testing.T) {
 				t.Errorf("Consumer.onChunk() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+		})
+	}
+}
+
+func TestConsumer_getNext(t *testing.T) {
+	type fields struct {
+		opts     Options
+		src      Source
+		onUpdate func(*Reader) error
+
+		closeEarly bool
+	}
+
+	type teststruct struct {
+		name   string
+		fields fields
+
+		wantErr bool
+	}
+
+	tests := []teststruct{
+		{
+			name: "basic",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+						return "test.12345.chunk.kir", nil
+					},
+				),
+				onUpdate: func(r *Reader) (err error) { return },
+			},
+			wantErr: false,
+		},
+		{
+			name: "close early",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+						return "test.12345.chunk.kir", nil
+					},
+				),
+				onUpdate:   func(r *Reader) (err error) { return },
+				closeEarly: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "error getting next",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+						return "", errors.Error("nope")
+					},
+				),
+				onUpdate: func(r *Reader) (err error) { return },
+			},
+			wantErr: true,
+		},
+		{
+			name: "error downloading",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return errors.Error("nope") },
+					func(ctx context.Context, filename string, w io.Writer) error { return errors.Error("nope") },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+						return "test.12345.chunk.kir", nil
+					},
+				),
+				onUpdate: func(r *Reader) (err error) { return },
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Mkdir(tt.fields.opts.Dir, 0744); err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tt.fields.opts.Dir)
+
+			c, err := newConsumer(context.Background(), tt.fields.opts, tt.fields.src, tt.fields.onUpdate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = c.Close() }()
+
+			if tt.fields.closeEarly {
+				c.Close()
+			}
+
+			if err = c.getNext(); (err != nil) != tt.wantErr {
+				t.Errorf("Consumer.onChunk() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func TestConsumer_scan(t *testing.T) {
+	type fields struct {
+		opts     Options
+		src      Source
+		onUpdate func(*Reader) error
+
+		closeEarly bool
+	}
+
+	type teststruct struct {
+		name   string
+		fields fields
+
+		wantErr bool
+	}
+
+	tests := []teststruct{
+		{
+			name: "basic",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func() getNextFn {
+						var count int
+						return func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+							count++
+							if count < 2 {
+								return "test.12345.chunk.kir", nil
+							}
+
+							return "", errors.ErrIsClosed
+						}
+					}(),
+				),
+				onUpdate: func(r *Reader) (err error) { return },
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Mkdir(tt.fields.opts.Dir, 0744); err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tt.fields.opts.Dir)
+
+			c, err := newConsumer(context.Background(), tt.fields.opts, tt.fields.src, tt.fields.onUpdate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = c.Close() }()
+
+			if tt.fields.closeEarly {
+				c.Close()
+			}
+
+			c.scan()
 		})
 	}
 }
