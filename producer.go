@@ -161,7 +161,7 @@ func (p *Producer) rename(f Filename, t Type) (err error) {
 	newFilename := path.Join(p.opts.Dir, newName.String())
 
 	// Rename original filename as new filename
-	if err = os.Rename(oldFilename, newFilename); err != nil {
+	if err = renameFile(oldFilename, newFilename); err != nil {
 		return
 	}
 

@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+// This block is for aliases of common OS operations. They are setup as aliases
+// so they can be easily mocked for testing purposes.
+var (
+	createFile = os.Create
+	renameFile = os.Rename
+)
+
 func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 	wfn := func(filename string, info os.FileInfo, ierr error) (err error) {
 		switch {
@@ -82,6 +89,7 @@ func wasCreatedAfter(filename string, timestamp int64) (after bool, err error) {
 		return
 	}
 
+	fmt.Println("Created after?", timestamp, parsed.createdAt, timestamp < parsed.createdAt)
 	return timestamp < parsed.createdAt, nil
 }
 

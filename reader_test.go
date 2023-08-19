@@ -28,7 +28,7 @@ func TestRead(t *testing.T) {
 		{
 			name: "basic",
 			prep: func() (err error) {
-				_, err = os.Create("test.txt")
+				_, err = createFile("test.txt")
 				return
 			},
 			teardown: func() {
@@ -147,7 +147,7 @@ func TestReader_ForEach(t *testing.T) {
 					}
 
 					var f *os.File
-					if f, err = os.Create("./test.txt"); err != nil {
+					if f, err = createFile("./test.txt"); err != nil {
 						return
 					}
 
@@ -243,7 +243,7 @@ func TestReader_Copy(t *testing.T) {
 					}
 
 					var f *os.File
-					if f, err = os.Create("./test.txt"); err != nil {
+					if f, err = createFile("./test.txt"); err != nil {
 						return
 					}
 
