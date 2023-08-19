@@ -29,8 +29,7 @@ func newMappedMeta(opts Options) (mm *mappedMeta, err error) {
 type mappedMeta struct {
 	mux sync.RWMutex
 
-	m *Meta
-
+	m  *Meta
 	f  *os.File
 	mm mmap.MMap
 
@@ -64,6 +63,8 @@ func (m *mappedMeta) Close() (err error) {
 	if m.closed {
 		return errors.ErrIsClosed
 	}
+
+	m.closed = true
 
 	if err = m.unmapMeta(); err != nil {
 		return
@@ -115,8 +116,8 @@ func (m *mappedMeta) setSize() (err error) {
 	}
 
 	// Check file size
-	if fi.Size() >= metaSize {
-		// File is at least as big as Meta size, nothing else is needed!
+	if fi.Size() == metaSize {
+		// File is as big as Meta size, nothing else is needed!
 		return
 	}
 
