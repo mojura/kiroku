@@ -115,15 +115,13 @@ func (c *Consumer) Meta() (meta Meta, err error) {
 
 // Close will close the selected instance of Kiroku
 func (c *Consumer) Close() (err error) {
-	// Always wait to complete
-	defer c.w.waitToComplete()
 	if isClosed(c.ctx) {
 		return errors.ErrIsClosed
 	}
 
 	c.close()
-
-	return
+	c.w.waitToComplete()
+	return c.m.Close()
 }
 
 func (c *Consumer) scan() {
