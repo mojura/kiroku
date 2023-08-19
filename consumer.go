@@ -162,10 +162,7 @@ func (c *Consumer) getNext() (err error) {
 
 	var filename string
 	lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
-	fmt.Println("About to call getnext")
 	filename, err = c.src.GetNext(c.ctx, prefix, lastFile.String())
-
-	fmt.Printf("Last file <%s> / Next file <%s>\n", lastFile, filename)
 	switch err {
 	case nil:
 	case io.EOF:
@@ -233,10 +230,8 @@ func (c *Consumer) getLatestSnapshotFilename() (filename string, err error) {
 		buf := bytes.NewBuffer(nil)
 		_, err = io.Copy(buf, r)
 		switch err {
-		case nil:
+		case nil, io.EOF:
 			filename = buf.String()
-			return
-		case io.EOF:
 			return nil
 
 		default:
@@ -244,7 +239,6 @@ func (c *Consumer) getLatestSnapshotFilename() (filename string, err error) {
 		}
 	})
 
-	fmt.Println("Get error", err)
 	return
 }
 
@@ -261,7 +255,7 @@ func (c *Consumer) download(filename string) (err error) {
 	defer os.Remove(tmpFilepath)
 
 	filepath := path.Join(c.opts.Dir, filename)
-	if err = os.Rename(tmpFilepath, filepath); err != nil {
+	if err = renameFile(tmpFilepath, filepath); err != nil {
 		err = fmt.Errorf("error renaming temporary file: %v", err)
 		return
 	}
@@ -281,7 +275,7 @@ func (c *Consumer) downloadTemp(filename string) (tmpFilepath string, err error)
 	var tmp *os.File
 	//	tmpFilepath = path.Join(os.TempDir(), "_downloading."+filename)
 	tmpFilepath = path.Join(c.opts.Dir, "_downloading."+filename)
-	if tmp, err = os.Create(tmpFilepath); err != nil {
+	if tmp, err = createFile(tmpFilepath); err != nil {
 		err = fmt.Errorf("error creating chunk: %v", err)
 		return
 	}
