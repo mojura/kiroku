@@ -63,6 +63,22 @@ func TestNewConsumer(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "invalid opts",
+			args: args{
+				opts: MakeOptions("./testing", ""),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+				onUpdate: func(r *Reader) (err error) {
+					return
+				},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1092,6 +1108,7 @@ func TestConsumer_getNext(t *testing.T) {
 
 func TestConsumer_scan(t *testing.T) {
 	type fields struct {
+		ctx      func() context.Context
 		opts     Options
 		src      Source
 		onUpdate func(*Reader) error
@@ -1111,6 +1128,14 @@ func TestConsumer_scan(t *testing.T) {
 			name: "basic",
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
+				ctx: func() context.Context {
+					ctx, cancel := context.WithCancel(context.Background())
+					go func() {
+						time.Sleep(time.Millisecond * 10)
+						cancel()
+					}()
+					return ctx
+				},
 				src: newMockSource(
 					func(ctx context.Context, filename string, r io.Reader) error { return nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
@@ -1131,6 +1156,62 @@ func TestConsumer_scan(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "error downloading initial sync",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				ctx: func() context.Context {
+					ctx, cancel := context.WithCancel(context.Background())
+					go func() {
+						time.Sleep(time.Millisecond * 10)
+						cancel()
+					}()
+					return ctx
+				},
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return errors.ErrIsClosed },
+					func() getNextFn {
+						var count int
+						return func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+							count++
+							if count < 2 {
+								return "test.12345.chunk.kir", nil
+							}
+
+							return "", errors.ErrIsClosed
+						}
+					}(),
+				),
+				onUpdate: func(r *Reader) (err error) { return },
+			},
+			wantErr: true,
+		},
+		{
+			name: "EOF",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				ctx: func() context.Context {
+					ctx, cancel := context.WithCancel(context.Background())
+					go func() {
+						time.Sleep(time.Millisecond * 10)
+						cancel()
+					}()
+					return ctx
+				},
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
+						return "", io.EOF
+					},
+				),
+				onUpdate: func(r *Reader) (err error) { return },
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1140,7 +1221,7 @@ func TestConsumer_scan(t *testing.T) {
 			}
 			defer os.RemoveAll(tt.fields.opts.Dir)
 
-			c, err := newConsumer(context.Background(), tt.fields.opts, tt.fields.src, tt.fields.onUpdate)
+			c, err := newConsumer(tt.fields.ctx(), tt.fields.opts, tt.fields.src, tt.fields.onUpdate)
 			if err != nil {
 				t.Fatal(err)
 			}

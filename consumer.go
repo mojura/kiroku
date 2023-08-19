@@ -128,6 +128,7 @@ func (c *Consumer) Close() (err error) {
 
 func (c *Consumer) scan() {
 	var err error
+	c.swg.Add(1)
 	defer c.swg.Done()
 	if err = c.getLatestSnapshot(); err != nil {
 		c.out.Errorf("Consumer.scan(): error getting latest snapshot: %v", err)
