@@ -137,7 +137,6 @@ func (c *Consumer) scan() {
 
 	for err == nil && !isClosed(c.ctx) {
 		err = c.sync()
-		fmt.Println("Sync err")
 		switch err {
 		case nil:
 		case io.EOF:
@@ -151,12 +150,10 @@ func (c *Consumer) scan() {
 }
 
 func (c *Consumer) sync() (err error) {
-	fmt.Println("Sync start")
 	for err == nil && !isClosed(c.ctx) {
 		err = c.getNext()
 	}
 
-	fmt.Println("Sync end")
 	return
 }
 
@@ -186,7 +183,6 @@ func (c *Consumer) getNext() (err error) {
 
 	var filename string
 	lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
-	fmt.Println("About to get next")
 	filename, err = c.src.GetNext(c.ctx, prefix, lastFile.String())
 	switch err {
 	case nil:
@@ -198,7 +194,6 @@ func (c *Consumer) getNext() (err error) {
 		return
 	}
 
-	fmt.Printf("About to download <%s>\n", filename)
 	if err = c.download(filename); err != nil {
 		err = fmt.Errorf("error downloading <%s>: %v", filename, err)
 		return

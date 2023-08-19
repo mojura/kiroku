@@ -89,7 +89,6 @@ func wasCreatedAfter(filename string, timestamp int64) (after bool, err error) {
 		return
 	}
 
-	fmt.Println("Created after?", timestamp, parsed.createdAt, timestamp < parsed.createdAt)
 	return timestamp < parsed.createdAt, nil
 }
 
