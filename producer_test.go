@@ -65,7 +65,11 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := New(tt.args.o, tt.args.src)
+			p, err := New(tt.args.o, tt.args.src)
+			if err == nil {
+				defer p.Close()
+			}
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -173,6 +177,7 @@ func TestProducer_BatchBlock(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer p.Close()
 
 			for _, value := range tt.args.values {
 				if err := p.BatchBlock(value); (err != nil) != tt.wantErr {
@@ -282,6 +287,7 @@ func TestProducer_Snapshot(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer p.Close()
 
 			if err := p.Snapshot(func(ss *Snapshot) (err error) {
 				for _, value := range tt.args.values {
@@ -503,6 +509,7 @@ func TestProducer_exportAndRemove(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer p.Close()
 
 			fn := makeFilename(tt.fields.opts.FullName(), time.Now().UnixNano(), tt.fields.filetype)
 
@@ -636,6 +643,7 @@ func TestProducer_transaction(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer p.Close()
 
 			if err = p.transaction(TypeChunk, func(w *Writer) (err error) {
 				if err = w.Write(Block("hello world")); err != nil {
