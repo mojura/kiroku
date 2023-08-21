@@ -17,14 +17,14 @@ const errBreak = errors.Error("break")
 
 // New will initialize a new Producer instance
 // Note: Processor and Options are optional
-func New(o Options, src Source) (kp *Producer, err error) {
+func NewProducer(o Options, src Source) (kp *Producer, err error) {
 	// Call NewWithContext with a background context
-	return NewWithContext(context.Background(), o, src)
+	return NewProducerWithContext(context.Background(), o, src)
 }
 
 // NewWithContext will initialize a new Producer instance with a provided context.Context
 // Note: Processor and Options are optional
-func NewWithContext(ctx context.Context, o Options, src Source) (kp *Producer, err error) {
+func NewProducerWithContext(ctx context.Context, o Options, src Source) (kp *Producer, err error) {
 	if err = o.Validate(); err != nil {
 		return
 	}

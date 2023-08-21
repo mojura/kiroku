@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestNew(t *testing.T) {
+func TestNewProducer(t *testing.T) {
 	type args struct {
 		o   Options
 		src Source
@@ -65,13 +65,13 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := New(tt.args.o, tt.args.src)
+			p, err := NewProducer(tt.args.o, tt.args.src)
 			if err == nil {
 				defer p.Close()
 			}
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewProducer() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})
@@ -174,7 +174,7 @@ func TestProducer_BatchBlock(t *testing.T) {
 			defer os.RemoveAll(tt.fields.opts.Dir)
 
 			tt.fields.opts.BatchDuration = time.Millisecond * 10
-			p, err := NewWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
+			p, err := NewProducerWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -284,7 +284,7 @@ func TestProducer_Snapshot(t *testing.T) {
 			}
 			defer os.RemoveAll(tt.fields.opts.Dir)
 
-			p, err := NewWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
+			p, err := NewProducerWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -362,7 +362,7 @@ func TestProducer_Close(t *testing.T) {
 			}
 			defer os.RemoveAll(tt.fields.opts.Dir)
 
-			p, err := NewWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
+			p, err := NewProducerWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -506,7 +506,7 @@ func TestProducer_exportAndRemove(t *testing.T) {
 			}
 			defer os.RemoveAll(tt.fields.opts.Dir)
 
-			p, err := NewWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
+			p, err := NewProducerWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -640,7 +640,7 @@ func TestProducer_transaction(t *testing.T) {
 				defer os.RemoveAll(tt.fields.opts.Dir)
 			}
 
-			p, err := NewWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
+			p, err := NewProducerWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
 			if err != nil {
 				t.Fatal(err)
 			}
