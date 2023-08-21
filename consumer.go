@@ -71,8 +71,6 @@ func newConsumer(ctx context.Context, opts Options, src Source, onUpdate func(*R
 	c.ctx, c.close = context.WithCancel(ctx)
 	c.opts = opts
 	c.src = src
-
-	// Initialize semaphores
 	c.onUpdate = onUpdate
 
 	c.w = newWatcher(c.ctx, c.opts, "chunk", c.onChunk)
@@ -111,6 +109,7 @@ func (c *Consumer) Meta() (meta Meta, err error) {
 // Close will close the selected instance of Kiroku
 func (c *Consumer) Close() (err error) {
 	if isClosed(c.ctx) {
+		c.w.waitToComplete()
 		return errors.ErrIsClosed
 	}
 
