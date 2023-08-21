@@ -8,50 +8,6 @@ import (
 	"time"
 )
 
-/*
-	func Test_watcher_process(t *testing.T) {
-		type fields struct {
-			ctx       context.Context
-			onTrigger func(Filename) error
-			s         semaphore
-			opts      Options
-			jobs      sync.WaitGroup
-		}
-		type args struct {
-			targetPrefix string
-		}
-		tests := []struct {
-			name    string
-			fields  fields
-			args    args
-			wantOk  bool
-			wantErr bool
-		}{
-			// TODO: Add test cases.
-		}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				w := &watcher{
-					ctx:       tt.fields.ctx,
-					out:       tt.fields.out,
-					onTrigger: tt.fields.onTrigger,
-					s:         tt.fields.s,
-					opts:      tt.fields.opts,
-					jobs:      tt.fields.jobs,
-				}
-				gotOk, err := w.process(tt.args.targetPrefix)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("watcher.process() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				if gotOk != tt.wantOk {
-					t.Errorf("watcher.process() = %v, want %v", gotOk, tt.wantOk)
-				}
-			})
-		}
-	}
-*/
-
 func Test_watcher_getNext(t *testing.T) {
 	type fields struct {
 		opts       Options
@@ -82,6 +38,37 @@ func Test_watcher_getNext(t *testing.T) {
 				targetType: TypeChunk,
 				prep: func() (err error) {
 					var f *os.File
+					if f, err = os.Create("./testing/testing.12346.chunk.kir"); err != nil {
+						return
+					}
+					_ = f.Close()
+					return
+				},
+			},
+			args: args{
+				filename: "testing.12345.chunk.kir",
+				info:     &mockFileInfo{},
+			},
+			wantFilename: Filename{
+				name:      "testing",
+				createdAt: 12346,
+				filetype:  TypeChunk,
+			},
+			wantOk:  true,
+			wantErr: false,
+		},
+		{
+			name: "contains unrelated file",
+			fields: fields{
+				opts:       MakeOptions("./testing", "testing"),
+				targetType: TypeChunk,
+				prep: func() (err error) {
+					var f *os.File
+					if f, err = os.Create("./testing/foobar.12346.chunk.kir"); err != nil {
+						return
+					}
+					_ = f.Close()
+
 					if f, err = os.Create("./testing/testing.12346.chunk.kir"); err != nil {
 						return
 					}

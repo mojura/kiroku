@@ -1,8 +1,11 @@
 package kiroku
 
 import (
+	"io"
 	"os"
 	"testing"
+
+	"github.com/edsrzf/mmap-go"
 )
 
 func Test_newMappedMeta(t *testing.T) {
@@ -243,6 +246,125 @@ func Test_mappedMeta_Close(t *testing.T) {
 
 			if err = m.Close(); (err != nil) != tt.wantErr {
 				t.Errorf("mappedmeta.Close() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_mappedMeta_setSize(t *testing.T) {
+	type fields struct {
+		opts Options
+
+		setClosed bool
+	}
+
+	type testcase struct {
+		name   string
+		fields fields
+
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name:   "basic",
+			fields: fields{opts: MakeOptions("./testing", "test")},
+		},
+		{
+			name:    "closed",
+			fields:  fields{opts: MakeOptions("./testing", "test"), setClosed: true},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Mkdir(tt.fields.opts.Dir, 0744); err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tt.fields.opts.Dir)
+
+			m, err := newMappedMeta(tt.fields.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.fields.setClosed {
+				_ = m.Close()
+			} else {
+				defer m.Close()
+			}
+
+			if err = m.setSize(); (err != nil) != tt.wantErr {
+				t.Errorf("mappedmeta.setSize() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_mappedMeta_mapMeta(t *testing.T) {
+	type fields struct {
+		opts Options
+
+		setClosed         bool
+		useErrorMapRegion bool
+	}
+
+	type testcase struct {
+		name   string
+		fields fields
+
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name:   "basic",
+			fields: fields{opts: MakeOptions("./testing", "test")},
+		},
+		{
+			name: "error mapping",
+			fields: fields{
+				opts:              MakeOptions("./testing", "test"),
+				useErrorMapRegion: true,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Mkdir(tt.fields.opts.Dir, 0744); err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tt.fields.opts.Dir)
+
+			m, err := newMappedMeta(tt.fields.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.fields.setClosed {
+				_ = m.Close()
+			} else {
+				defer m.Close()
+			}
+
+			if tt.fields.useErrorMapRegion {
+				oldMapRegion := mapRegion
+				defer func() {
+					mapRegion = oldMapRegion
+				}()
+
+				mapRegion = func(f *os.File, length int, prot int, flags int, offset int64) (mmap.MMap, error) {
+					return nil, io.EOF
+				}
+			}
+
+			if err = m.mapMeta(); (err != nil) != tt.wantErr {
+				t.Errorf("mappedmeta.setSize() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})

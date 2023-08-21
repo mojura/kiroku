@@ -81,7 +81,7 @@ func (m *mappedMeta) mapMeta() (err error) {
 	}
 
 	// Map bytes equal to the size of the Meta
-	if m.mm, err = mmap.MapRegion(m.f, int(metaSize), os.O_RDWR, 0, 0); err != nil {
+	if m.mm, err = mapRegion(m.f, int(metaSize), os.O_RDWR, 0, 0); err != nil {
 		err = fmt.Errorf("error initializing MMAP: %v", err)
 		return
 	}
