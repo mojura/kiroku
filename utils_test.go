@@ -2,6 +2,8 @@ package kiroku
 
 import (
 	"context"
+	"io"
+	"os"
 	"testing"
 	"time"
 
@@ -157,6 +159,60 @@ func Test_isNilSource(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotIsNil := isNilSource(tt.args.s()); gotIsNil != tt.wantIsNil {
 				t.Errorf("isNilSource() = %v, want %v", gotIsNil, tt.wantIsNil)
+			}
+		})
+	}
+}
+
+func Test_walk(t *testing.T) {
+	type args struct {
+		dir string
+		fn  func(string, os.FileInfo) error
+	}
+
+	type testcase struct {
+		name    string
+		args    args
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name: "basic",
+			args: args{
+				dir: "./",
+				fn: func(filename string, info os.FileInfo) (err error) {
+					return
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "with error",
+			args: args{
+				dir: "./",
+				fn: func(filename string, info os.FileInfo) (err error) {
+					return io.EOF
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "break",
+			args: args{
+				dir: "./",
+				fn: func(filename string, info os.FileInfo) (err error) {
+					return errBreak
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := walk(tt.args.dir, tt.args.fn); (err != nil) != tt.wantErr {
+				t.Errorf("walk() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
