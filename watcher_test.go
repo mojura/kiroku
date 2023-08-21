@@ -114,7 +114,12 @@ func Test_watcher_getNext(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			w := newWatcher(context.Background(), tt.fields.opts, tt.fields.targetPrefix, func(f Filename) error { return nil })
+			ctx, cancel := context.WithCancel(context.Background())
+
+			w := newWatcher(ctx, tt.fields.opts, tt.fields.targetPrefix, func(f Filename) error { return nil })
+			defer w.waitToComplete()
+			defer cancel()
+
 			gotFilename, gotOk, gotErr := w.getNext(tt.fields.targetPrefix)
 			if gotFilename != tt.wantFilename {
 				t.Errorf("watcher.getNext() = %v, want %v", gotFilename, tt.wantFilename)
@@ -191,7 +196,10 @@ func Test_watcher_isWriterMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w := newWatcher(context.Background(), tt.fields.opts, tt.fields.targetPrefix, func(f Filename) error { return nil })
+			ctx, cancel := context.WithCancel(context.Background())
+			w := newWatcher(ctx, tt.fields.opts, tt.fields.targetPrefix, func(f Filename) error { return nil })
+			defer w.waitToComplete()
+			defer cancel()
 			if gotOk := w.isWriterMatch(tt.fields.targetPrefix, tt.args.filename, tt.args.info); gotOk != tt.wantOk {
 				t.Errorf("watcher.isWriterMatch() = %v, want %v", gotOk, tt.wantOk)
 			}
