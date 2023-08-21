@@ -18,7 +18,7 @@ func TestNewConsumer(t *testing.T) {
 	type args struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 
 		avoidDirectory bool
 	}
@@ -40,7 +40,7 @@ func TestNewConsumer(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -56,7 +56,7 @@ func TestNewConsumer(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 				avoidDirectory: true,
@@ -73,7 +73,7 @@ func TestNewConsumer(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -107,7 +107,7 @@ func TestNewOneShotConsumer(t *testing.T) {
 	type args struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 
 		avoidDirectory bool
 	}
@@ -150,7 +150,7 @@ func TestNewOneShotConsumer(t *testing.T) {
 						}
 					}(),
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -166,7 +166,7 @@ func TestNewOneShotConsumer(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 				avoidDirectory: true,
@@ -195,7 +195,7 @@ func TestNewOneShotConsumer(t *testing.T) {
 						}
 					}(),
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -225,7 +225,7 @@ func TestConsumer_Meta(t *testing.T) {
 	type fields struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 	}
 
 	type teststruct struct {
@@ -246,7 +246,7 @@ func TestConsumer_Meta(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -287,7 +287,7 @@ func TestConsumer_Close(t *testing.T) {
 	type fields struct {
 		opts       Options
 		src        Source
-		onUpdate   func(*Reader) error
+		onUpdate   func(Type, *Reader) error
 		closeEarly bool
 	}
 
@@ -309,7 +309,7 @@ func TestConsumer_Close(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -329,7 +329,7 @@ func TestConsumer_Close(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 				closeEarly: true,
@@ -370,7 +370,7 @@ func TestConsumer_sync(t *testing.T) {
 	type fields struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 	}
 
 	type teststruct struct {
@@ -401,7 +401,7 @@ func TestConsumer_sync(t *testing.T) {
 						}
 					}(),
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -434,7 +434,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 	type fields struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 	}
 
 	type teststruct struct {
@@ -458,7 +458,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 						return "helloworld.txt", nil
 					},
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -476,7 +476,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 						return "", nil
 					},
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -500,7 +500,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 						return "", nil
 					},
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -524,7 +524,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 						return "", nil
 					},
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -544,7 +544,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 						return "text.12346.chunk.kir", nil
 					},
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -581,7 +581,7 @@ func TestConsumer_isAfter(t *testing.T) {
 	type fields struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 
 		closeEarly bool
 	}
@@ -609,7 +609,7 @@ func TestConsumer_isAfter(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -629,7 +629,7 @@ func TestConsumer_isAfter(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 				closeEarly: true,
@@ -650,7 +650,7 @@ func TestConsumer_isAfter(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 				closeEarly: false,
@@ -671,7 +671,7 @@ func TestConsumer_isAfter(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 				closeEarly: false,
@@ -719,7 +719,7 @@ func TestConsumer_onChunk(t *testing.T) {
 	type fields struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 
 		missingFile bool
 	}
@@ -746,7 +746,7 @@ func TestConsumer_onChunk(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 			},
@@ -765,7 +765,7 @@ func TestConsumer_onChunk(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
 				},
 				missingFile: true,
@@ -785,7 +785,7 @@ func TestConsumer_onChunk(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) {
+				onUpdate: func(typ Type, r *Reader) (err error) {
 					f, ok := r.r.(*os.File)
 					if !ok {
 						err = fmt.Errorf("invalid type, expected <*os.File> and received <%T>", r.r)
@@ -856,7 +856,7 @@ func TestConsumer_download(t *testing.T) {
 	type fields struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 
 		cannotCreate bool
 		cannotRename bool
@@ -884,7 +884,7 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: false,
 		},
@@ -901,7 +901,7 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: true,
 		},
@@ -918,7 +918,7 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate:     func(r *Reader) (err error) { return },
+				onUpdate:     func(typ Type, r *Reader) (err error) { return },
 				cannotCreate: true,
 			},
 			wantErr: true,
@@ -936,7 +936,7 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate:     func(r *Reader) (err error) { return },
+				onUpdate:     func(typ Type, r *Reader) (err error) { return },
 				cannotRename: true,
 			},
 			wantErr: true,
@@ -954,7 +954,7 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: true,
 		},
@@ -1004,7 +1004,7 @@ func TestConsumer_getNext(t *testing.T) {
 	type fields struct {
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 
 		closeEarly bool
 	}
@@ -1029,7 +1029,7 @@ func TestConsumer_getNext(t *testing.T) {
 						return "test.12345.chunk.kir", nil
 					},
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: false,
 		},
@@ -1045,7 +1045,7 @@ func TestConsumer_getNext(t *testing.T) {
 						return "test.12345.chunk.kir", nil
 					},
 				),
-				onUpdate:   func(r *Reader) (err error) { return },
+				onUpdate:   func(typ Type, r *Reader) (err error) { return },
 				closeEarly: true,
 			},
 			wantErr: true,
@@ -1062,7 +1062,7 @@ func TestConsumer_getNext(t *testing.T) {
 						return "", errors.Error("nope")
 					},
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: true,
 		},
@@ -1078,7 +1078,7 @@ func TestConsumer_getNext(t *testing.T) {
 						return "test.12345.chunk.kir", nil
 					},
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: true,
 		},
@@ -1114,7 +1114,7 @@ func TestConsumer_scan(t *testing.T) {
 		ctx      func() context.Context
 		opts     Options
 		src      Source
-		onUpdate func(*Reader) error
+		onUpdate func(Type, *Reader) error
 
 		closeEarly bool
 	}
@@ -1155,7 +1155,7 @@ func TestConsumer_scan(t *testing.T) {
 						}
 					}(),
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: false,
 		},
@@ -1187,7 +1187,7 @@ func TestConsumer_scan(t *testing.T) {
 						}
 					}(),
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: true,
 		},
@@ -1211,7 +1211,7 @@ func TestConsumer_scan(t *testing.T) {
 						return "", io.EOF
 					},
 				),
-				onUpdate: func(r *Reader) (err error) { return },
+				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
 			wantErr: true,
 		},

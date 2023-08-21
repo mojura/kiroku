@@ -22,13 +22,13 @@ const (
 )
 
 // NewConsumer will initialize a new Consumer instance
-func NewConsumer(opts Options, src Source, onUpdate func(*Reader) error) (mp *Consumer, err error) {
+func NewConsumer(opts Options, src Source, onUpdate UpdateFunc) (mp *Consumer, err error) {
 	// Call NewConsumerWithContext with a background context
 	return NewConsumerWithContext(context.Background(), opts, src, onUpdate)
 }
 
 // NewConsumerWithContext will initialize a new Consumer instance with a provided context.Context
-func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (c *Consumer, err error) {
+func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate UpdateFunc) (c *Consumer, err error) {
 	if c, err = newConsumer(ctx, opts, src, onUpdate); err != nil {
 		return
 	}
@@ -39,13 +39,13 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 }
 
 // NewOneShotConsumer will initialize a new one-shot Consumer instance with a provided context.Context
-func NewOneShotConsumer(opts Options, src Source, onUpdate func(*Reader) error) (err error) {
+func NewOneShotConsumer(opts Options, src Source, onUpdate UpdateFunc) (err error) {
 	ctx := context.Background()
 	return NewOneShotConsumerWithContext(ctx, opts, src, onUpdate)
 }
 
 // NewConsumerWithContext will initialize a new Consumer instance with a provided context.Context
-func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (err error) {
+func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source, onUpdate UpdateFunc) (err error) {
 	var c *Consumer
 	if c, err = newConsumer(ctx, opts, src, onUpdate); err != nil {
 		return
@@ -58,7 +58,7 @@ func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source
 	return c.Close()
 }
 
-func newConsumer(ctx context.Context, opts Options, src Source, onUpdate func(*Reader) error) (ref *Consumer, err error) {
+func newConsumer(ctx context.Context, opts Options, src Source, onUpdate UpdateFunc) (ref *Consumer, err error) {
 	var c Consumer
 	if err = opts.Validate(); err != nil {
 		return
@@ -90,7 +90,7 @@ type Consumer struct {
 
 	opts     Options
 	src      Source
-	onUpdate func(*Reader) error
+	onUpdate UpdateFunc
 
 	swg sync.WaitGroup
 }
@@ -307,7 +307,9 @@ func (c *Consumer) downloadTemp(filename string) (tmpFilepath string, err error)
 func (c *Consumer) onChunk(filename Filename) (err error) {
 	// Process chunk
 	filepath := path.Join(c.opts.Dir, filename.String())
-	if err = Read(filepath, c.onUpdate); err != nil {
+	if err = Read(filepath, func(r *Reader) (err error) {
+		return c.onUpdate(filename.filetype, r)
+	}); err != nil {
 		err = fmt.Errorf("error encountered while processing: %v", err)
 		return
 	}
