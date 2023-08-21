@@ -817,7 +817,10 @@ func TestConsumer_onChunk(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer func() { _ = c.Close() }()
+
+			if err = c.Close(); err != nil {
+				t.Fatal(err)
+			}
 
 			if !tt.fields.missingFile {
 				w, err := newWriter(tt.fields.opts.Dir, tt.args.filename)
