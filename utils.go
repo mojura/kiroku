@@ -53,10 +53,6 @@ func isNilSource(s Source) (isNil bool) {
 		return true
 	}
 
-	if val.IsNil() {
-		return true
-	}
-
 	return false
 }
 
