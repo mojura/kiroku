@@ -19,18 +19,6 @@ type Meta struct {
 	LastProcessedType      Type  `json:"type"`
 }
 
-func (m *Meta) merge(in *Meta) {
-	// Check to see if inbound Meta exists
-	if in == nil {
-		// Inbound Meta does not exist, bail out
-		return
-	}
-
-	mm := *in
-	// Set the underlying Meta as the dereferenced value of the inbound Meta
-	*m = mm
-}
-
 func (m *Meta) IsEmpty() bool {
 	return *m == emptyMeta
 }
