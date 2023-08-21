@@ -73,7 +73,7 @@ func newConsumer(ctx context.Context, opts Options, src Source, onUpdate func(*R
 	c.src = src
 	c.onUpdate = onUpdate
 
-	c.w = newWatcher(c.ctx, c.opts, "chunk", c.onChunk)
+	c.w = newWatcher(c.ctx, c.opts, c.onChunk, TypeChunk, TypeSnapshot)
 	ref = &c
 	return
 }

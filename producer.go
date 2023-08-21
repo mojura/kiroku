@@ -42,7 +42,7 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Producer, e
 	// Set source state
 	p.hasSource = !isNilSource(src)
 
-	p.w = newWatcher(p.ctx, o, "chunk", p.exportAndRemove)
+	p.w = newWatcher(p.ctx, o, p.exportAndRemove, TypeChunk)
 	p.b = newBatcher(p.opts.BatchDuration, p.Transaction)
 	kp = &p
 	return
@@ -140,7 +140,7 @@ func (p *Producer) Close() (err error) {
 	var errs errors.ErrorList
 	if !p.opts.AvoidExportOnClose {
 		// Options do not request avoiding merge on close, process remaining merged chunks
-		errs.Push(p.w.processAll("merged"))
+		errs.Push(p.w.processAll())
 	}
 
 	return errs.Err()

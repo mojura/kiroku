@@ -54,9 +54,9 @@ import (
 
 func Test_watcher_getNext(t *testing.T) {
 	type fields struct {
-		opts         Options
-		targetPrefix string
-		prep         func() error
+		opts       Options
+		targetType Type
+		prep       func() error
 	}
 
 	type args struct {
@@ -78,8 +78,8 @@ func Test_watcher_getNext(t *testing.T) {
 		{
 			name: "basic",
 			fields: fields{
-				opts:         MakeOptions("./testing", "testing"),
-				targetPrefix: "chunk",
+				opts:       MakeOptions("./testing", "testing"),
+				targetType: TypeChunk,
 				prep: func() (err error) {
 					var f *os.File
 					if f, err = os.Create("./testing/testing.12346.chunk.kir"); err != nil {
@@ -116,11 +116,11 @@ func Test_watcher_getNext(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
 
-			w := newWatcher(ctx, tt.fields.opts, tt.fields.targetPrefix, func(f Filename) error { return nil })
+			w := newWatcher(ctx, tt.fields.opts, func(f Filename) error { return nil }, tt.fields.targetType)
 			defer w.waitToComplete()
 			defer cancel()
 
-			gotFilename, gotOk, gotErr := w.getNext(tt.fields.targetPrefix)
+			gotFilename, gotOk, gotErr := w.getNext()
 			if gotFilename != tt.wantFilename {
 				t.Errorf("watcher.getNext() = %v, want %v", gotFilename, tt.wantFilename)
 			}
@@ -132,76 +132,6 @@ func Test_watcher_getNext(t *testing.T) {
 			if (gotErr != nil) != tt.wantErr {
 				t.Errorf("NewConsumer() error = %v, wantErr %v", gotErr, tt.wantErr)
 				return
-			}
-		})
-	}
-}
-
-func Test_watcher_isWriterMatch(t *testing.T) {
-	type fields struct {
-		opts         Options
-		targetPrefix string
-	}
-
-	type args struct {
-		filename string
-		info     os.FileInfo
-	}
-
-	type testcase struct {
-		name   string
-		fields fields
-		args   args
-		wantOk bool
-	}
-
-	tests := []testcase{
-		{
-			name: "basic",
-			fields: fields{
-				opts:         MakeOptions("./", "testing"),
-				targetPrefix: "chunk",
-			},
-			args: args{
-				filename: "testing.12345.chunk.kir",
-				info:     &mockFileInfo{},
-			},
-			wantOk: true,
-		},
-		{
-			name: "is not match",
-			fields: fields{
-				opts:         MakeOptions("./", "testing"),
-				targetPrefix: "chunk",
-			},
-			args: args{
-				filename: "boop.12345.chunk.kir",
-				info:     &mockFileInfo{},
-			},
-		},
-		{
-			name: "isDir",
-			fields: fields{
-				opts:         MakeOptions("./", "testing"),
-				targetPrefix: "chunk",
-			},
-			args: args{
-				filename: "testingDir",
-				info: &mockFileInfo{
-					isDir: true,
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			w := newWatcher(ctx, tt.fields.opts, tt.fields.targetPrefix, func(f Filename) error { return nil })
-			defer w.waitToComplete()
-			defer cancel()
-			if gotOk := w.isWriterMatch(tt.fields.targetPrefix, tt.args.filename, tt.args.info); gotOk != tt.wantOk {
-				t.Errorf("watcher.isWriterMatch() = %v, want %v", gotOk, tt.wantOk)
 			}
 		})
 	}

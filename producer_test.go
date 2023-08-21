@@ -173,6 +173,7 @@ func TestProducer_BatchBlock(t *testing.T) {
 			}
 			defer os.RemoveAll(tt.fields.opts.Dir)
 
+			tt.fields.opts.BatchDuration = time.Millisecond * 10
 			p, err := NewWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
 			if err != nil {
 				t.Fatal(err)

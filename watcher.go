@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 )
 
-func newWatcher(ctx context.Context, opts Options, targetPrefix string, onTrigger func(Filename) error) *watcher {
+func newWatcher(ctx context.Context, opts Options, onTrigger func(Filename) error, ts ...Type) *watcher {
 	var w watcher
 	w.ctx = ctx
 	w.opts = opts
@@ -18,10 +17,12 @@ func newWatcher(ctx context.Context, opts Options, targetPrefix string, onTrigge
 
 	// Initialize semaphores
 	w.s = make(semaphore, 1)
+	// Set types
+	w.ts = ts
 	// Increment jobs waiter
 	w.jobs.Add(1)
 	// Initialize watch job
-	go w.watch(targetPrefix)
+	go w.watch()
 	// Associate returning pointer to created Producer
 	return &w
 }
@@ -33,6 +34,8 @@ type watcher struct {
 
 	// Merging semaphore
 	s semaphore
+	// Types
+	ts []Type
 
 	opts Options
 
@@ -40,7 +43,7 @@ type watcher struct {
 	jobs sync.WaitGroup
 }
 
-func (w *watcher) watch(targetPrefix string) {
+func (w *watcher) watch() {
 	var (
 		ok  bool
 		err error
@@ -50,7 +53,7 @@ func (w *watcher) watch(targetPrefix string) {
 	defer w.jobs.Done()
 	// Iterate until Producer is closed
 	for !isClosed(w.ctx) {
-		if ok, err = w.process(targetPrefix); err != nil {
+		if ok, err = w.process(); err != nil {
 			err = fmt.Errorf("error processing: %v", err)
 			w.opts.OnError(err)
 			w.sleep(time.Minute)
@@ -62,11 +65,11 @@ func (w *watcher) watch(targetPrefix string) {
 	}
 }
 
-func (w *watcher) processAll(targetPrefix string) (err error) {
+func (w *watcher) processAll() (err error) {
 	var ok bool
 	// Iterate until Producer is closed
 	for {
-		if ok, err = w.process(targetPrefix); !ok || err != nil {
+		if ok, err = w.process(); !ok || err != nil {
 			return
 		}
 	}
@@ -75,11 +78,11 @@ func (w *watcher) processAll(targetPrefix string) (err error) {
 // process will process matches until:
 //   - No more matches are found
 //   - Watcher has been closed
-func (w *watcher) process(targetPrefix string) (ok bool, err error) {
+func (w *watcher) process() (ok bool, err error) {
 	var filename Filename
 	// Get next file for the target prefix
-	if filename, ok, err = w.getNext(targetPrefix); err != nil {
-		err = fmt.Errorf("error getting next %s filename: <%v>, sleeping for a minute and trying again", targetPrefix, err)
+	if filename, ok, err = w.getNext(); err != nil {
+		err = fmt.Errorf("error getting next %+v filename: <%v>, sleeping for a minute and trying again", w.ts, err)
 		return
 	}
 
@@ -96,22 +99,31 @@ func (w *watcher) process(targetPrefix string) (ok bool, err error) {
 	return
 }
 
-func (w *watcher) getNext(targetPrefix string) (filename Filename, ok bool, err error) {
+func (w *watcher) getNext() (filename Filename, ok bool, err error) {
 	fn := func(iteratingName string, info os.FileInfo) (err error) {
 		truncated := filepath.Base(iteratingName)
+		if info.IsDir() {
+			// We are not interested in directories, return
+			return
+		}
+
 		// Check to see if current file is a match for the current name and prefix
-		if !w.isWriterMatch(targetPrefix, truncated, info) {
-			// This is not a match, return
-			return
-		}
-
-		// We found a match, set <filename> to the iterating name and set <ok> to true
 		if filename, err = parseFilename(truncated); err != nil {
-			err = fmt.Errorf("error parsing <%s> as filename: %v", iteratingName, err)
+			err = nil
 			return
 		}
 
-		ok = true
+		if filename.name != w.opts.FullName() {
+			return
+		}
+
+		for _, t := range w.ts {
+			if filename.filetype == t {
+				ok = true
+				break
+			}
+		}
+
 		// Return break
 		return errBreak
 	}
@@ -119,21 +131,6 @@ func (w *watcher) getNext(targetPrefix string) (filename Filename, ok bool, err 
 	// Iterate through files within directory
 	err = walk(w.opts.Dir, fn)
 	return
-}
-
-func (w *watcher) isWriterMatch(targetPrefix, filename string, info os.FileInfo) (ok bool) {
-	if info.IsDir() {
-		// We are not interested in directories, return
-		return
-	}
-
-	// Check to see if filename has the needed prefix
-	if !strings.HasPrefix(filename, w.opts.FullName()+".") {
-		// We do not have a service match, return
-		return
-	}
-
-	return true
 }
 
 func (w *watcher) waitForNext() {
