@@ -126,6 +126,8 @@ func (p *Producer) Close() (err error) {
 
 	// Check to see if Producer is closed
 	if isClosed(p.ctx) {
+		// Wait for jobs to finish
+		p.w.waitToComplete()
 		return errors.ErrIsClosed
 	}
 
