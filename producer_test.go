@@ -32,6 +32,23 @@ func TestNew(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "basic with namespace",
+			args: args{
+				o: Options{
+					Dir:       "./",
+					Name:      "testing",
+					Namespace: "scoped",
+				},
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+			},
+			wantErr: false,
+		},
+		{
 			name: "invalid",
 			args: args{
 				o: MakeOptions("", ""),
