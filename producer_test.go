@@ -292,7 +292,7 @@ func TestProducer_Snapshot(t *testing.T) {
 
 				return
 			}); (err != nil) != tt.wantErr {
-				t.Errorf("Producer.BatchBlock() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Producer.Snapshot() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gdbu/scribe"
 	"github.com/hatchify/errors"
 )
 
@@ -31,10 +30,6 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Producer, e
 	}
 
 	var p Producer
-	// Set output prefix
-	prefix := fmt.Sprintf("Producer (%v)", o.Name)
-	// Initialize Producer output
-	p.out = scribe.New(prefix)
 	// Set options
 	p.opts = o
 	// Set directory as a cleaned version of the provided directory
@@ -47,7 +42,7 @@ func NewWithContext(ctx context.Context, o Options, src Source) (kp *Producer, e
 	// Set source state
 	p.hasSource = !isNilSource(src)
 
-	p.w = newWatcher(p.ctx, o, p.out, "chunk", p.exportAndRemove)
+	p.w = newWatcher(p.ctx, o, "chunk", p.exportAndRemove)
 	p.b = newBatcher(p.opts.BatchDuration, p.Transaction)
 	kp = &p
 	return
@@ -61,9 +56,6 @@ type Producer struct {
 	ctx context.Context
 	// Context cancel func
 	cancelFn func()
-
-	// Output logger
-	out *scribe.Scribe
 
 	// Producer options
 	opts Options

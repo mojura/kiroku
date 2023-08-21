@@ -36,6 +36,9 @@ type Options struct {
 	Name      string `toml:"name" json:"name"`
 	Namespace string `toml:"namespace" json:"namespace"`
 
+	OnLog   func(message string)
+	OnError func(err error)
+
 	AvoidExportOnClose  bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
 	AvoidProcessOnClose bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
 
@@ -93,5 +96,13 @@ func (o *Options) fill() {
 
 	if o.BatchDuration == 0 {
 		o.BatchDuration = DefaultBatchDuration
+	}
+
+	if o.OnLog == nil {
+		o.OnLog = func(string) {}
+	}
+
+	if o.OnError == nil {
+		o.OnError = func(error) {}
 	}
 }

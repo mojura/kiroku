@@ -1,11 +1,5 @@
 github.com/edsrzf/mmap-go v1.1.0 h1:6EUwBLQ/Mcr1EYLE4Tn1VdW1A4ckqCQWZBw8Hr0kjpQ=
 github.com/edsrzf/mmap-go v1.1.0/go.mod h1:19H/e8pUPLicwkyNgOykDXkJ9F0MHE+Z52B8EIth78Q=
-github.com/gdbu/scribe v0.5.3 h1:kWkkE8p3iLB2CuReTTLKBYnRx4OTMZpDJTO2Z0xZ0WE=
-github.com/gdbu/scribe v0.5.3/go.mod h1:d2N8Lim+phn6EuoppRUs6Vm9CSAHtzhTubGNM+A9Ya4=
-github.com/hatchify/colors v0.4.79 h1:E7LXqZVYDFNaTcQGxlBSfEKQ2rByeAUW84uKkat3AoA=
-github.com/hatchify/colors v0.4.79/go.mod h1:t0952Ef1zDFMVTCkOwhrdJS9ToVWTdcJ3PWCHZADLuU=
-github.com/hatchify/cron v0.4.82 h1:NXiWl4/9w8Egg2N2FCrQuPYLevszgUv62ZHHMzfFbi8=
-github.com/hatchify/cron v0.4.82/go.mod h1:X/CVy+BJDASlwrjpwJC4+jzD5Oeaw/NHGYkKRO3r9Tc=
 github.com/hatchify/errors v0.4.82 h1:o7eB9r1X3Sx7PBRRXMCaAm+vXcoQLE4ZOesIv4oK36Q=
 github.com/hatchify/errors v0.4.82/go.mod h1:niCrsPjs0fFes147TgJ0LSUVdtavQTUvBxNoJm9Vew0=
 github.com/mojura/enkodo v0.5.7 h1:g+vvhX13j5ayhcLdzqr0fAB6tUVfhi8vgWX4tnrY/pk=

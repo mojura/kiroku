@@ -4,18 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/gdbu/scribe"
 )
 
-func newWatcher(ctx context.Context, opts Options, out *scribe.Scribe, targetPrefix string, onTrigger func(Filename) error) *watcher {
+func newWatcher(ctx context.Context, opts Options, targetPrefix string, onTrigger func(Filename) error) *watcher {
 	var w watcher
 	w.ctx = ctx
 	w.opts = opts
-	w.out = out
 	w.onTrigger = onTrigger
 
 	// Initialize semaphores
@@ -30,9 +28,6 @@ func newWatcher(ctx context.Context, opts Options, out *scribe.Scribe, targetPre
 
 type watcher struct {
 	ctx context.Context
-
-	// Output logger
-	out *scribe.Scribe
 
 	onTrigger func(Filename) error
 
@@ -56,7 +51,8 @@ func (w *watcher) watch(targetPrefix string) {
 	// Iterate until Producer is closed
 	for !isClosed(w.ctx) {
 		if ok, err = w.process(targetPrefix); err != nil {
-			w.out.Error(err.Error())
+			err = fmt.Errorf("error processing: %v", err)
+			w.opts.OnError(err)
 			w.sleep(time.Minute)
 		}
 
@@ -102,7 +98,7 @@ func (w *watcher) process(targetPrefix string) (ok bool, err error) {
 
 func (w *watcher) getNext(targetPrefix string) (filename Filename, ok bool, err error) {
 	fn := func(iteratingName string, info os.FileInfo) (err error) {
-		truncated := w.getTruncatedName(iteratingName)
+		truncated := filepath.Base(iteratingName)
 		// Check to see if current file is a match for the current name and prefix
 		if !w.isWriterMatch(targetPrefix, truncated, info) {
 			// This is not a match, return
@@ -132,22 +128,12 @@ func (w *watcher) isWriterMatch(targetPrefix, filename string, info os.FileInfo)
 	}
 
 	// Check to see if filename has the needed prefix
-	if !strings.HasPrefix(filename, w.opts.FullName()+"."+targetPrefix) {
+	if !strings.HasPrefix(filename, w.opts.FullName()+".") {
 		// We do not have a service match, return
 		return
 	}
 
 	return true
-}
-
-func (w *watcher) getTruncatedName(filename string) (name string) {
-	// Truncate name by removing directory
-	// TODO: There might have been a reason it was setup this way instead of using
-	// path.Base, unfortunately I forgot to leave a comment as to why I did so. This
-	// is a note to do some discovery around this. The outcome should be one of two:
-	//	1. Comment as to why this approach was used
-	//	2. Use path.Base
-	return strings.Replace(filename, w.opts.Dir+"/", "", 1)
 }
 
 func (w *watcher) waitForNext() {

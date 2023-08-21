@@ -9,7 +9,6 @@ import (
 	"path"
 	"sync"
 
-	"github.com/gdbu/scribe"
 	"github.com/hatchify/errors"
 )
 
@@ -69,17 +68,14 @@ func newConsumer(ctx context.Context, opts Options, src Source, onUpdate func(*R
 		return
 	}
 
-	scribePrefix := fmt.Sprintf("Kiroku [%s] (Consumer)", opts.Name)
 	c.ctx, c.close = context.WithCancel(ctx)
-	c.out = scribe.New(scribePrefix)
-
 	c.opts = opts
 	c.src = src
 
 	// Initialize semaphores
 	c.onUpdate = onUpdate
 
-	c.w = newWatcher(c.ctx, c.opts, c.out, "chunk", c.onChunk)
+	c.w = newWatcher(c.ctx, c.opts, "chunk", c.onChunk)
 	ref = &c
 	return
 }
@@ -92,8 +88,7 @@ type Consumer struct {
 
 	m *mappedMeta
 
-	out *scribe.Scribe
-	w   *watcher
+	w *watcher
 
 	opts     Options
 	src      Source
@@ -129,7 +124,8 @@ func (c *Consumer) scan() {
 	c.swg.Add(1)
 	defer c.swg.Done()
 	if err = c.getLatestSnapshot(); err != nil {
-		c.out.Errorf("Consumer.scan(): error getting latest snapshot: %v", err)
+		err = fmt.Errorf("Consumer.scan(): error getting latest snapshot: %v", err)
+		c.opts.OnError(err)
 		return
 	}
 
@@ -141,7 +137,8 @@ func (c *Consumer) scan() {
 			err = sleep(c.ctx, c.opts.EndOfResultsDelay)
 
 		default:
-			c.out.Errorf("Consumer.scan(): error updating: %v", err)
+			err = fmt.Errorf("Consumer.scan(): error updating: %v", err)
+			c.opts.OnError(err)
 			err = sleep(c.ctx, c.opts.ErrorDelay)
 		}
 	}
@@ -263,8 +260,8 @@ func (c *Consumer) getLatestSnapshotFilename() (filename string, err error) {
 
 func (c *Consumer) download(filename string) (err error) {
 	var tmpFilepath string
-	c.out.Notificationf("downloading <%s>", filename)
-	defer c.out.Notificationf("downloaded <%s>", filename)
+	c.opts.OnLog(fmt.Sprintf("downloading <%s>", filename))
+	defer c.opts.OnLog(fmt.Sprintf("downloaded <%s>", filename))
 	if tmpFilepath, err = c.downloadTemp(filename); err != nil {
 		return
 	}
