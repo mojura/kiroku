@@ -1,6 +1,8 @@
 package kiroku
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestOptions_validate(t *testing.T) {
 	type testcase struct {
@@ -35,5 +37,49 @@ func TestOptions_validate(t *testing.T) {
 		if err != tc.want {
 			t.Fatalf("invalid error, expected <%v> and received <%v>", tc.want, err)
 		}
+	}
+}
+
+func TestOptions_FullName(t *testing.T) {
+	type fields struct {
+		Name      string
+		Namespace string
+	}
+
+	type testcase struct {
+		name   string
+		fields fields
+		want   string
+	}
+
+	tests := []testcase{
+		{
+			name: "name",
+			fields: fields{
+				Name: "foo",
+			},
+			want: "foo",
+		},
+		{
+			name: "name",
+			fields: fields{
+				Name:      "foo",
+				Namespace: "bar",
+			},
+			want: "bar_foo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := &Options{
+				Name:      tt.fields.Name,
+				Namespace: tt.fields.Namespace,
+			}
+
+			if got := o.FullName(); got != tt.want {
+				t.Errorf("Options.FullName() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
