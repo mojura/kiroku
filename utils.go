@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"time"
+
+	"github.com/edsrzf/mmap-go"
 )
 
 // This block is for aliases of common OS operations. They are setup as aliases
@@ -14,6 +16,7 @@ import (
 var (
 	createFile = os.Create
 	renameFile = os.Rename
+	mapRegion  = mmap.MapRegion
 )
 
 func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
