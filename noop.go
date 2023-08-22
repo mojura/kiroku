@@ -11,8 +11,8 @@ var _ Source = &NOOP{}
 type NOOP struct {
 }
 
-func (n *NOOP) Export(ctx context.Context, filename string, r io.Reader) error {
-	return nil
+func (n *NOOP) Export(ctx context.Context, filename string, r io.Reader) (newFilename string, err error) {
+	return filename, nil
 }
 
 func (n *NOOP) Import(ctx context.Context, filename string, w io.Writer) error {

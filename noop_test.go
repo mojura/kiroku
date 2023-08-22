@@ -15,9 +15,11 @@ func TestNOOP_Export(t *testing.T) {
 	}
 
 	type testcase struct {
-		name    string
-		args    args
-		wantErr bool
+		name string
+		args args
+
+		wantFilename string
+		wantErr      bool
 	}
 
 	tests := []testcase{
@@ -33,7 +35,12 @@ func TestNOOP_Export(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			n := &NOOP{}
-			if err := n.Export(context.Background(), tt.args.filename, tt.args.r); (err != nil) != tt.wantErr {
+			gotFilename, err := n.Export(context.Background(), tt.args.filename, tt.args.r)
+			if gotFilename != tt.wantFilename {
+				t.Errorf("NOOP.Export() filename = %v, wantFiename %v", gotFilename, tt.wantFilename)
+			}
+
+			if (err != nil) != tt.wantErr {
 				t.Errorf("NOOP.Export() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

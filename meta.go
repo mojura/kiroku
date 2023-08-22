@@ -7,6 +7,17 @@ var (
 	metaSize  = int64(unsafe.Sizeof(Meta{}))
 )
 
+func makeMetaFromFilename(filename string) (m Meta, err error) {
+	var parsed Filename
+	if parsed, err = parseFilename(filename); err != nil {
+		return
+	}
+
+	m.LastProcessedTimestamp = parsed.createdAt
+	m.LastProcessedType = parsed.filetype
+	return
+}
+
 func newMetaFromBytes(bs []byte) *Meta {
 	// Associate meta with provided bytes
 	return (*Meta)(unsafe.Pointer(&bs[0]))

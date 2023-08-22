@@ -35,7 +35,7 @@ func TestNewConsumer(t *testing.T) {
 			args: args{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -51,7 +51,7 @@ func TestNewConsumer(t *testing.T) {
 			args: args{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -68,7 +68,7 @@ func TestNewConsumer(t *testing.T) {
 			args: args{
 				opts: MakeOptions("./testing", ""),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -124,7 +124,7 @@ func TestNewOneShotConsumer(t *testing.T) {
 			args: args{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func() getFn {
 						var count int
@@ -161,7 +161,7 @@ func TestNewOneShotConsumer(t *testing.T) {
 			args: args{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -178,7 +178,7 @@ func TestNewOneShotConsumer(t *testing.T) {
 			args: args{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error {
 						return errors.ErrIsClosed
@@ -241,7 +241,7 @@ func TestConsumer_Meta(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -304,7 +304,7 @@ func TestConsumer_Close(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -324,7 +324,7 @@ func TestConsumer_Close(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -385,7 +385,7 @@ func TestConsumer_sync(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func() getNextFn {
@@ -449,7 +449,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error {
 						return fn(strings.NewReader("text.12345.chunk.kir"))
@@ -469,7 +469,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return os.ErrNotExist },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return os.ErrNotExist },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
@@ -487,7 +487,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return io.EOF },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error {
 						return fn(&mockReader{
@@ -511,7 +511,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return io.EOF },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error {
 						return fn(&mockReader{
@@ -535,7 +535,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return io.EOF },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, io.EOF },
 					func(ctx context.Context, filename string, w io.Writer) error { return io.EOF },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error {
 						return fn(strings.NewReader("text.12345.snapshot.kir"))
@@ -604,7 +604,7 @@ func TestConsumer_isAfter(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -624,7 +624,7 @@ func TestConsumer_isAfter(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -645,7 +645,7 @@ func TestConsumer_isAfter(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -666,7 +666,7 @@ func TestConsumer_isAfter(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -741,7 +741,7 @@ func TestConsumer_onChunk(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -760,7 +760,7 @@ func TestConsumer_onChunk(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -780,7 +780,7 @@ func TestConsumer_onChunk(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -879,7 +879,7 @@ func TestConsumer_download(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -896,7 +896,7 @@ func TestConsumer_download(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return errors.Error("import fail") },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -913,7 +913,7 @@ func TestConsumer_download(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -931,7 +931,7 @@ func TestConsumer_download(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -949,7 +949,7 @@ func TestConsumer_download(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
@@ -1022,7 +1022,7 @@ func TestConsumer_getNext(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
@@ -1038,7 +1038,7 @@ func TestConsumer_getNext(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
@@ -1055,7 +1055,7 @@ func TestConsumer_getNext(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
@@ -1071,7 +1071,9 @@ func TestConsumer_getNext(t *testing.T) {
 			fields: fields{
 				opts: MakeOptions("./testing", "test"),
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return errors.Error("nope") },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) {
+						return filename, errors.Error("nope")
+					},
 					func(ctx context.Context, filename string, w io.Writer) error { return errors.Error("nope") },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
@@ -1140,7 +1142,7 @@ func TestConsumer_scan(t *testing.T) {
 					return ctx
 				},
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func() getNextFn {
@@ -1172,7 +1174,7 @@ func TestConsumer_scan(t *testing.T) {
 					return ctx
 				},
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return errors.ErrIsClosed },
 					func() getNextFn {
@@ -1204,7 +1206,7 @@ func TestConsumer_scan(t *testing.T) {
 					return ctx
 				},
 				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) error { return nil },
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) {

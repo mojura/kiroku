@@ -42,6 +42,10 @@ func NewProducerWithContext(ctx context.Context, o Options, src Source) (kp *Pro
 	// Set source state
 	p.hasSource = !isNilSource(src)
 
+	if p.m, err = newMappedMeta(o); err != nil {
+		return
+	}
+
 	p.w = newWatcher(p.ctx, o, p.exportAndRemove, TypeChunk)
 	p.b = newBatcher(p.opts.BatchDuration, p.Transaction)
 	kp = &p
@@ -63,6 +67,7 @@ type Producer struct {
 	src       Source
 	hasSource bool
 
+	m *mappedMeta
 	w *watcher
 	b *batcher
 }
@@ -176,10 +181,19 @@ func (p *Producer) export(filename Filename) (err error) {
 	}
 	defer f.Close()
 
-	if err = p.src.Export(context.Background(), filename.String(), f); err != nil {
+	var newFilename string
+	if newFilename, err = p.src.Export(context.Background(), filename.String(), f); err != nil {
 		err = fmt.Errorf("error exporting <%s>: %v", filename.String(), err)
 		return
 	}
+
+	var m Meta
+	if m, err = makeMetaFromFilename(newFilename); err != nil {
+		err = fmt.Errorf("error getting meta from new filename <%s>: %v", newFilename, err)
+		return
+	}
+
+	p.m.Set(m)
 
 	if filename.filetype != TypeSnapshot {
 		return
@@ -187,7 +201,7 @@ func (p *Producer) export(filename Filename) (err error) {
 
 	rdr := strings.NewReader(filename.String())
 	snapshotName := getSnapshotName(p.opts.FullName())
-	if err = p.src.Export(context.Background(), snapshotName, rdr); err != nil {
+	if _, err = p.src.Export(context.Background(), snapshotName, rdr); err != nil {
 		err = fmt.Errorf("error setting latest snapshot: %v", err)
 		return
 	}
