@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -326,6 +327,97 @@ func TestProducer_Snapshot(t *testing.T) {
 				return
 			}); (err != nil) != tt.wantErr {
 				t.Errorf("Producer.Snapshot() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestProducer_Meta(t *testing.T) {
+	type fields struct {
+		opts       Options
+		src        Source
+		closeEarly bool
+		onUpdate   func(Type, *Reader) error
+	}
+
+	type teststruct struct {
+		name     string
+		fields   fields
+		wantMeta Meta
+		wantErr  bool
+	}
+
+	tests := []teststruct{
+		{
+			name: "basic",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+				onUpdate: func(typ Type, r *Reader) (err error) {
+					return
+				},
+			},
+			wantMeta: Meta{
+				LastProcessedTimestamp: 0,
+				LastProcessedType:      TypeInvalid,
+			},
+			wantErr: false,
+		},
+		{
+			name: "closed",
+			fields: fields{
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+				onUpdate: func(typ Type, r *Reader) (err error) {
+					return
+				},
+				closeEarly: true,
+			},
+			wantMeta: Meta{
+				LastProcessedTimestamp: 0,
+				LastProcessedType:      TypeInvalid,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Mkdir(tt.fields.opts.Dir, 0744); err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tt.fields.opts.Dir)
+
+			p, err := NewProducer(tt.fields.opts, tt.fields.src)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			defer func() { _ = p.Close() }()
+
+			if tt.fields.closeEarly {
+				if err = p.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			gotMeta, err := p.Meta()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Consumer.Meta() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotMeta, tt.wantMeta) {
+				t.Errorf("Consumer.Meta() = %v, want %v", gotMeta, tt.wantMeta)
 			}
 		})
 	}

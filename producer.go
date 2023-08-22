@@ -124,6 +124,17 @@ func (p *Producer) BatchBlock(value []byte) (err error) {
 	return handleTwoErrors(berr, err)
 }
 
+// Meta will return a copy of the current Meta
+func (p *Producer) Meta() (meta Meta, err error) {
+	if isClosed(p.ctx) {
+		err = errors.ErrIsClosed
+		return
+	}
+
+	meta = p.m.Get()
+	return
+}
+
 // Close will close the selected instance of Producer
 func (p *Producer) Close() (err error) {
 	p.mux.Lock()
