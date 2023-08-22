@@ -28,7 +28,8 @@ func TestNOOP_Export(t *testing.T) {
 				filename: "test",
 				r:        strings.NewReader("hello world"),
 			},
-			wantErr: false,
+			wantFilename: "test",
+			wantErr:      false,
 		},
 	}
 
