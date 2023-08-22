@@ -14,7 +14,10 @@ import (
 // This block is for aliases of common OS operations. They are setup as aliases
 // so they can be easily mocked for testing purposes.
 var (
-	createFile = os.Create
+	createFile       = os.Create
+	createAppendFile = func(filepath string) (f *os.File, err error) {
+		return os.OpenFile(filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0744)
+	}
 	renameFile = os.Rename
 	mapRegion  = mmap.MapRegion
 )

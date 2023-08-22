@@ -10,18 +10,22 @@ import (
 
 func TestNewProducer(t *testing.T) {
 	type args struct {
-		o   Options
-		src Source
+		o                    Options
+		src                  Source
+		avoidDirectoryCreate bool
 	}
-	tests := []struct {
+
+	type testcase struct {
 		name    string
 		args    args
 		wantErr bool
-	}{
+	}
+
+	tests := []testcase{
 		{
 			name: "basic",
 			args: args{
-				o: MakeOptions("./", "test"),
+				o: MakeOptions("./testing", "test"),
 				src: newMockSource(
 					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
 					func(ctx context.Context, filename string, w io.Writer) error { return nil },
@@ -35,7 +39,7 @@ func TestNewProducer(t *testing.T) {
 			name: "basic with namespace",
 			args: args{
 				o: Options{
-					Dir:       "./",
+					Dir:       "./testing",
 					Name:      "testing",
 					Namespace: "scoped",
 				},
@@ -58,6 +62,21 @@ func TestNewProducer(t *testing.T) {
 					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 				),
+				avoidDirectoryCreate: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing directory",
+			args: args{
+				o: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+				avoidDirectoryCreate: true,
 			},
 			wantErr: true,
 		},
@@ -65,6 +84,13 @@ func TestNewProducer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if !tt.args.avoidDirectoryCreate {
+				if err := os.Mkdir(tt.args.o.Dir, 0744); err != nil {
+					t.Fatal(err)
+				}
+				defer os.RemoveAll(tt.args.o.Dir)
+			}
+
 			p, err := NewProducer(tt.args.o, tt.args.src)
 			if err == nil {
 				defer p.Close()
@@ -497,6 +523,23 @@ func TestProducer_exportAndRemove(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "bad export filename",
+			fields: fields{
+				ctx: func() context.Context {
+					return context.Background()
+				},
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return "foo." + filename, nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+				filetype: TypeChunk,
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -542,12 +585,14 @@ func TestProducer_exportAndRemove(t *testing.T) {
 
 func TestProducer_transaction(t *testing.T) {
 	type fields struct {
-		ctx                  func() context.Context
-		opts                 Options
-		src                  Source
-		filetype             Type
+		ctx      func() context.Context
+		opts     Options
+		src      Source
+		filetype Type
+
 		avoidDirectoryCreate bool
 		adjustFilename       bool
+		errorCreatingWriter  bool
 		returnError          bool
 	}
 
@@ -574,24 +619,6 @@ func TestProducer_transaction(t *testing.T) {
 				filetype: TypeChunk,
 			},
 			wantErr: false,
-		},
-		{
-			name: "missing directory",
-			fields: fields{
-				ctx: func() context.Context {
-					return context.Background()
-				},
-				opts: MakeOptions("./testing", "test"),
-				src: newMockSource(
-					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
-					func(ctx context.Context, filename string, w io.Writer) error { return nil },
-					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
-					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
-				),
-				filetype:             TypeChunk,
-				avoidDirectoryCreate: true,
-			},
-			wantErr: true,
 		},
 		{
 			name: "missing file",
@@ -629,6 +656,24 @@ func TestProducer_transaction(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "error creating writer",
+			fields: fields{
+				ctx: func() context.Context {
+					return context.Background()
+				},
+				opts: MakeOptions("./testing", "test"),
+				src: newMockSource(
+					func(ctx context.Context, filename string, r io.Reader) (string, error) { return filename, nil },
+					func(ctx context.Context, filename string, w io.Writer) error { return nil },
+					func(ctx context.Context, filename string, fn func(io.Reader) error) error { return nil },
+					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+				),
+				filetype:            TypeChunk,
+				errorCreatingWriter: true,
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -638,6 +683,14 @@ func TestProducer_transaction(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer os.RemoveAll(tt.fields.opts.Dir)
+			}
+
+			if tt.fields.errorCreatingWriter {
+				oldCreateAppend := createAppendFile
+				defer func() { createAppendFile = oldCreateAppend }()
+				createAppendFile = func(filename string) (*os.File, error) {
+					return nil, io.EOF
+				}
 			}
 
 			p, err := NewProducerWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)

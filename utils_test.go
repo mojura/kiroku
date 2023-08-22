@@ -207,6 +207,16 @@ func Test_walk(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "with directory error",
+			args: args{
+				dir: "./testing",
+				fn: func(filename string, info os.FileInfo) (err error) {
+					return
+				},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

@@ -18,7 +18,7 @@ func newWriter(dir string, filename Filename) (wp *Writer, err error) {
 	w.filepath = path.Join(dir, w.filename.String())
 	// Open target file
 	// Note: This will create the file if it does not exist
-	if w.f, err = os.OpenFile(w.filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0744); err != nil {
+	if w.f, err = createAppendFile(w.filepath); err != nil {
 		return
 	}
 
