@@ -46,7 +46,7 @@ func NewProducerWithContext(ctx context.Context, o Options, src Source) (kp *Pro
 		return
 	}
 
-	p.w = newWatcher(p.ctx, o, p.exportAndRemove, TypeChunk)
+	p.w = newWatcher(p.ctx, o, p.exportAndRemove, TypeChunk, TypeSnapshot)
 	p.b = newBatcher(p.opts.BatchDuration, p.Transaction)
 	kp = &p
 	return
