@@ -115,6 +115,10 @@ func (c *Consumer) Close() (err error) {
 
 	c.close()
 	c.w.waitToComplete()
+	if err = c.w.processAll(); err != nil {
+		return
+	}
+
 	return c.m.Close()
 }
 
