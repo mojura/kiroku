@@ -29,6 +29,11 @@ func parseFilename(filename string) (parsed Filename, err error) {
 		return
 	}
 
+	if spl[3] != "kir" {
+		err = fmt.Errorf("invalid file extension, expected <%s> and received <%s>", "kir", spl[3])
+		return
+	}
+
 	return
 }
 
