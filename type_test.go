@@ -1,78 +1,207 @@
 package kiroku
 
 import (
-	"fmt"
+	"bytes"
 	"testing"
 )
 
 func TestType_Validate(t *testing.T) {
 	type testcase struct {
-		t   Type
-		err string
+		name    string
+		tr      Type
+		wantErr bool
 	}
 
-	tcs := []testcase{
+	tests := []testcase{
 		{
-			t: TypeWriteAction,
+			name:    "chunk",
+			tr:      TypeChunk,
+			wantErr: false,
 		},
 		{
-			t: TypeDeleteAction,
+			name:    "snapshot",
+			tr:      TypeSnapshot,
+			wantErr: false,
 		},
 		{
-			t: TypeComment,
+			name:    "temporary",
+			tr:      TypeTemporary,
+			wantErr: false,
 		},
 		{
-			t:   TypeComment + 1,
-			err: fmt.Sprintf(invalidTypeLayout, TypeComment+1),
+			name:    "invalid",
+			tr:      TypeTemporary + 100,
+			wantErr: true,
 		},
 	}
 
-	for _, tc := range tcs {
-		err := tc.t.Validate()
-		switch {
-		case err == nil && tc.err == "":
-		case err != nil && tc.err == err.Error():
-
-		case err == nil && tc.err != "":
-			t.Fatalf("invalid error, expected <%s> and received nil", tc.err)
-		case err != nil && tc.err != err.Error():
-			t.Fatalf("invalid error, expected <%s> and received <%v>", tc.err, err)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.tr.Validate(); (err != nil) != tt.wantErr {
+				t.Errorf("Type.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
 func TestType_String(t *testing.T) {
 	type testcase struct {
-		t   Type
-		str string
+		name string
+		tr   Type
+		want string
 	}
 
-	tcs := []testcase{
+	tests := []testcase{
 		{
-			t:   TypeUnset,
-			str: "unset",
+			name: "chunk",
+			tr:   TypeChunk,
+			want: "chunk",
 		},
 		{
-			t:   TypeWriteAction,
-			str: "write",
+			name: "snapshot",
+			tr:   TypeSnapshot,
+			want: "snapshot",
 		},
 		{
-			t:   TypeDeleteAction,
-			str: "delete",
+			name: "temporary",
+			tr:   TypeTemporary,
+			want: "tmp",
 		},
 		{
-			t:   TypeComment,
-			str: "comment",
-		},
-		{
-			t:   TypeComment + 1,
-			str: "invalid",
+			name: "invalid",
+			tr:   TypeTemporary + 100,
+			want: "INVALID",
 		},
 	}
 
-	for _, tc := range tcs {
-		if str := tc.t.String(); str != tc.str {
-			t.Fatalf("invalid string value, expected <%s> and received <%s>", tc.str, str)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if str := tt.tr.String(); str != tt.want {
+				t.Errorf("Type.String() value = %v, want %v", str, tt.want)
+			}
+		})
+	}
+}
+
+func TestType_MarshalJSON(t *testing.T) {
+	type testcase struct {
+		name string
+
+		want    []byte
+		wantErr bool
+
+		tr Type
+	}
+
+	tests := []testcase{
+		{
+			name:    "chunk",
+			tr:      TypeChunk,
+			want:    []byte(`"chunk"`),
+			wantErr: false,
+		},
+		{
+			name:    "snapshot",
+			tr:      TypeSnapshot,
+			want:    []byte(`"snapshot"`),
+			wantErr: false,
+		},
+		{
+			name:    "temporary",
+			tr:      TypeTemporary,
+			want:    []byte(`"tmp"`),
+			wantErr: false,
+		},
+		{
+			name:    "invalid",
+			tr:      TypeTemporary + 100,
+			want:    []byte(`"INVALID"`),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bs, err := tt.tr.MarshalJSON()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Type.MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !bytes.Equal(bs, tt.want) {
+				t.Errorf("Type.MarshalJSON() value = %v, want %v", string(bs), string(tt.want))
+			}
+		})
+	}
+}
+
+func TestType_UnmarshalJSON(t *testing.T) {
+	type args struct {
+		bs []byte
+	}
+
+	type testcase struct {
+		name string
+
+		args args
+
+		want    Type
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name: "chunk",
+			args: args{
+				bs: []byte(`"chunk"`),
+			},
+			want:    TypeChunk,
+			wantErr: false,
+		},
+		{
+			name: "snapshot",
+			args: args{
+				bs: []byte(`"snapshot"`),
+			},
+			want:    TypeSnapshot,
+			wantErr: false,
+		},
+		{
+			name: "temporary",
+			args: args{
+				bs: []byte(`"tmp"`),
+			},
+			want:    TypeTemporary,
+			wantErr: false,
+		},
+		{
+			name: "invalid",
+			args: args{
+				bs: []byte(`"INVALID"`),
+			},
+			want:    TypeInvalid,
+			wantErr: true,
+		},
+		{
+			name: "parse error",
+			args: args{
+				bs: []byte(`1`),
+			},
+			want:    TypeInvalid,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var tester Type
+			err := tester.UnmarshalJSON(tt.args.bs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Type.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tester != tt.want {
+				t.Errorf("Type.UnmarshalJSON() value = %v, want %v", tester, tt.want)
+			}
+		})
 	}
 }

@@ -1,24 +1,26 @@
 package kiroku
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
-	"strings"
+	"time"
+
+	"github.com/edsrzf/mmap-go"
 )
 
-func GenerateFilename(name, kind string, timestamp int64) string {
-	if timestamp == 0 {
-		return ""
+// This block is for aliases of common OS operations. They are setup as aliases
+// so they can be easily mocked for testing purposes.
+var (
+	createFile       = os.Create
+	createAppendFile = func(filepath string) (f *os.File, err error) {
+		return os.OpenFile(filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0744)
 	}
-
-	return fmt.Sprintf("%s.%d.%s.moj", name, timestamp, kind)
-
-}
+	renameFile = os.Rename
+	mapRegion  = mmap.MapRegion
+)
 
 func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 	wfn := func(filename string, info os.FileInfo, ierr error) (err error) {
@@ -43,49 +45,6 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 	return
 }
 
-func parseFilename(filename string) (parsed filenameMeta, err error) {
-	spl := strings.Split(filename, ".")
-	if len(spl) != 4 {
-		err = fmt.Errorf("invalid number of filename parts, expected 4 and received %d", len(spl))
-		return
-	}
-
-	if parsed.createdAt, err = strconv.ParseInt(spl[1], 10, 64); err != nil {
-		return
-	}
-
-	parsed.name = spl[0]
-	parsed.kind = spl[2]
-	return
-}
-
-type filenameMeta struct {
-	name      string
-	kind      string
-	createdAt int64
-}
-
-func removeFile(f fs.File, dir string) (err error) {
-	var info fs.FileInfo
-	if info, err = f.Stat(); err != nil {
-		return
-	}
-
-	filename := filepath.Join(dir, info.Name())
-
-	if err = f.Close(); err != nil {
-		return
-	}
-
-	return os.Remove(filename)
-}
-
-type File interface {
-	io.Seeker
-	io.Reader
-	io.ReaderAt
-}
-
 func getSnapshotName(name string) string {
 	return fmt.Sprintf("_latestSnapshots/%s.txt", name)
 }
@@ -100,9 +59,48 @@ func isNilSource(s Source) (isNil bool) {
 		return true
 	}
 
-	if val.IsNil() {
+	return false
+}
+
+func isClosed(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		// Context done channel is closed, return true
 		return true
+	default:
+		// Context done channel is not closed, return false
+		return false
+	}
+}
+
+func sleep(ctx context.Context, sleepDuration time.Duration) (err error) {
+	timer := time.NewTimer(sleepDuration)
+	select {
+	case <-ctx.Done():
+		timer.Stop()
+		return ctx.Err()
+	case <-timer.C:
 	}
 
-	return false
+	return
+}
+
+func wasCreatedAfter(filename string, timestamp int64) (after bool, err error) {
+	var parsed Filename
+	if parsed, err = parseFilename(filename); err != nil {
+		return
+	}
+
+	return timestamp < parsed.createdAt, nil
+}
+
+func handleTwoErrors(a, b error) (err error) {
+	switch {
+	case a != nil:
+		return a
+	case b != nil:
+		return b
+	default:
+		return nil
+	}
 }

@@ -36,27 +36,23 @@ type Options struct {
 	Name      string `toml:"name" json:"name"`
 	Namespace string `toml:"namespace" json:"namespace"`
 
-	AvoidImportOnInit  bool `toml:"avoid_import_on_init" json:"avoidImportOnInit"`
-	AvoidMergeOnInit   bool `toml:"avoid_merge_on_init" json:"avoidMergeOnInit"`
-	AvoidMergeOnClose  bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
-	AvoidExportOnClose bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
+	OnLog   func(message string)
+	OnError func(err error)
 
-	IsMirror bool `toml:"is_mirror" json:"isMirror"`
+	AvoidExportOnClose  bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
+	AvoidProcessOnClose bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
 
-	// Event handlers
-	OnUpdate func(*Reader)
-
-	// Note: The below fields are only used for Mirrors
+	// BatchDuration represents the amount of time to keep a transaction open for a
+	// Batch operation
+	BatchDuration time.Duration `toml:"batch_duration" json:"batchDuration"`
 
 	// EndOfResultsDelay represents the amount of time to wait before pulling "Next" after
 	// receiving empty results (Default is 10 seconds).
 	EndOfResultsDelay time.Duration `toml:"end_of_results_delay" json:"endOfResultsDelay"`
+
 	// ErrorDelay represents the amount of time to wait before pulling "Next" after
 	// receiving an error
 	ErrorDelay time.Duration `toml:"error_delay" json:"errorDelay"`
-	// BatchDuration represents the amount of time to keep a transaction open for a
-	// Batch operation
-	BatchDuration time.Duration `toml:"batch_duration" json:"batchDuration"`
 
 	// RangeStart will determine the moment in time from which syncs will begin
 	RangeStart time.Time `toml:"range_start" json:"rangeStart"`
@@ -100,5 +96,13 @@ func (o *Options) fill() {
 
 	if o.BatchDuration == 0 {
 		o.BatchDuration = DefaultBatchDuration
+	}
+
+	if o.OnLog == nil {
+		o.OnLog = func(string) {}
+	}
+
+	if o.OnError == nil {
+		o.OnError = func(error) {}
 	}
 }

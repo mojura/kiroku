@@ -1,47 +1,55 @@
 package kiroku
 
-import (
-	"bytes"
-	"io"
-	"os"
-	"testing"
-)
+import "testing"
 
-func Test_newMetaFromReader_with_error(t *testing.T) {
-	var (
-		f   *os.File
-		err error
-	)
-
-	type testcase struct {
-		r      io.ReadSeeker
-		errStr string
+func TestMeta_IsEmpty(t *testing.T) {
+	type fields struct {
+		LastProcessedTimestamp int64
+		LastProcessedType      Type
 	}
-
-	tcs := []testcase{
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
 		{
-			r:      f,
-			errStr: "error encountered while seeking to beginning of file: invalid argument",
+			name:   "empty",
+			fields: fields{},
+			want:   true,
 		},
 		{
-			r:      bytes.NewReader(make([]byte, 12)),
-			errStr: "error reading meta bytes: unexpected EOF",
+			name: "has timestamp",
+			fields: fields{
+				LastProcessedTimestamp: 1,
+			},
+			want: false,
+		},
+		{
+			name: "empty",
+			fields: fields{
+				LastProcessedType: TypeChunk,
+			},
+			want: false,
+		},
+		{
+			name: "empty",
+			fields: fields{
+				LastProcessedTimestamp: 1,
+				LastProcessedType:      TypeChunk,
+			},
+			want: false,
 		},
 	}
 
-	for _, tc := range tcs {
-		var errStr string
-		if _, err = newMetaFromReader(tc.r); err != nil {
-			errStr = err.Error()
-		}
-
-		if errStr != tc.errStr {
-			t.Fatalf("invalid error, expected <%s>, received <%v>", tc.errStr, err)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Meta{
+				LastProcessedTimestamp: tt.fields.LastProcessedTimestamp,
+				LastProcessedType:      tt.fields.LastProcessedType,
+			}
+			if got := m.IsEmpty(); got != tt.want {
+				t.Errorf("Meta.IsEmpty() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-}
-
-func TestMeta_merge_nil(t *testing.T) {
-	var m Meta
-	m.merge(nil)
 }

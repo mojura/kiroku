@@ -1,167 +1,229 @@
 package kiroku
 
 import (
-	"fmt"
-	"io/fs"
+	"context"
+	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hatchify/errors"
 )
 
-func Test_walk(t *testing.T) {
-	expectedErr := fmt.Errorf("lstat %s: no such file or directory", "invalid_dir")
-	fn := func(filename string, info os.FileInfo) (err error) {
-		return
+func Test_sleep(t *testing.T) {
+	type args struct {
+		ctx           func() context.Context
+		sleepDuration time.Duration
 	}
 
-	if err := compareErrors(expectedErr, walk("invalid_dir", fn)); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func Test_walk_files_removed_mid_iteration(t *testing.T) {
-	var err error
-	if err = os.Mkdir("./test_data", 0744); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll("./test_data")
-
-	for i := 0; i < 100; i++ {
-		var f *os.File
-		filename := fmt.Sprintf("./test_data/%d.txt", i)
-		if f, err = os.Create(filename); err != nil {
-			t.Fatal(err)
-		}
-
-		if err = f.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	fn := func(filename string, info os.FileInfo) (err error) {
-		return
-	}
-
-	errC := make(chan error)
-	go func() {
-		for i := 99; i > -1; i-- {
-			filename := fmt.Sprintf("./test_data/%d.txt", i)
-			if err = os.Remove(filename); err != nil {
-				errC <- err
-				return
-			}
-		}
-
-		errC <- nil
-		close(errC)
-	}()
-
-	for i := 0; i < 10; i++ {
-		if err := compareErrors(nil, walk("test_data", fn)); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if err = <-errC; err != nil {
-		t.Fatal(err)
-	}
-}
-
-func Test_removeFile(t *testing.T) {
-	var err error
-	if err = os.Mkdir("./test_data", 0744); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll("./test_data")
-
-	var f *os.File
-	if f, err = os.Create("./test_data/test"); err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-
-	if err = removeFile(f, "./test_data"); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = removeFile(f, "./test_data"); err == nil {
-		t.Fatal("expected error and received nil")
-	}
-}
-
-func Test_removeFile_with_close_error(t *testing.T) {
-	var err error
-	if err = os.Mkdir("./test_data", 0744); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll("./test_data")
-
-	var f *os.File
-	if f, err = os.Create("./test_data/test"); err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-
-	mf := mockFile{
-		stat: func() (fs.FileInfo, error) {
-			return f.Stat()
-		},
-		read: func(bs []byte) (int, error) {
-			return f.Read(bs)
-		},
-		close: func() error { return errors.New("foobar") },
-	}
-
-	err = removeFile(&mf, "./test_data")
-	switch {
-	case err == nil:
-		t.Fatalf("invalid error, expected <foobar> and received nil")
-	case err.Error() != "foobar":
-		t.Fatalf("invalid error, expected <%s> and received <%s>", "foobar", err.Error())
-	}
-}
-
-func Test_isNilSrc(t *testing.T) {
-	type testcase struct {
-		getSrc  func() Source
-		expects bool
-	}
-
-	tcs := []testcase{
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
 		{
-			getSrc:  func() Source { return nil },
-			expects: true,
-		},
-		{
-			getSrc: func() Source {
-				var s Source
-				return s
+			name: "context close",
+			args: args{
+				ctx: func() context.Context {
+					ctx, cancel := context.WithCancel(context.Background())
+					cancel()
+					return ctx
+				},
+				sleepDuration: time.Millisecond,
 			},
-			expects: true,
+			wantErr: true,
 		},
 		{
-			getSrc:  func() Source { return &mockSource{} },
-			expects: false,
+			name: "context close",
+			args: args{
+				ctx: func() context.Context {
+					return context.Background()
+				},
+				sleepDuration: time.Millisecond,
+			},
+			wantErr: false,
 		},
 	}
 
-	for i, tc := range tcs {
-		val := isNilSource(tc.getSrc())
-		if val != tc.expects {
-			t.Fatalf("invalid value, expected %v and received %v (Test case #%d)", tc.expects, val, i)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := sleep(tt.args.ctx(), tt.args.sleepDuration); (err != nil) != tt.wantErr {
+				t.Errorf("sleep() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
-type mockFile struct {
-	stat  func() (fs.FileInfo, error)
-	read  func([]byte) (int, error)
-	close func() error
+func Test_handleTwoErrors(t *testing.T) {
+	type args struct {
+		a error
+		b error
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "both",
+			args: args{
+				a: errors.Error("one"),
+				b: errors.Error("one"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "a",
+			args: args{
+				a: errors.Error("one"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "b",
+			args: args{
+				b: errors.Error("one"),
+			},
+			wantErr: true,
+		},
+		{
+			name:    "none",
+			args:    args{},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := handleTwoErrors(tt.args.a, tt.args.b); (err != nil) != tt.wantErr {
+				t.Errorf("handleTwoErrors() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
 
-func (m *mockFile) Stat() (fs.FileInfo, error) { return m.stat() }
+func Test_isNilSource(t *testing.T) {
+	type args struct {
+		s func() Source
+	}
 
-func (m *mockFile) Read(bs []byte) (int, error) { return m.read(bs) }
+	type testcase struct {
+		name      string
+		args      args
+		wantIsNil bool
+	}
 
-func (m *mockFile) Close() error { return m.close() }
+	tests := []testcase{
+		{
+			name: "basic",
+			args: args{
+				s: func() Source { return &NOOP{} },
+			},
+			wantIsNil: false,
+		},
+		{
+
+			name: "unset",
+			args: args{
+				s: func() Source {
+					return nil
+				},
+			},
+			wantIsNil: true,
+		},
+		{
+
+			name: "nil",
+			args: args{
+				s: func() Source {
+					var noop *NOOP
+					return noop
+				},
+			},
+			wantIsNil: true,
+		},
+		{
+
+			name: "nil interface",
+			args: args{
+				s: func() Source {
+					var s Source
+					return s
+				},
+			},
+			wantIsNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotIsNil := isNilSource(tt.args.s()); gotIsNil != tt.wantIsNil {
+				t.Errorf("isNilSource() = %v, want %v", gotIsNil, tt.wantIsNil)
+			}
+		})
+	}
+}
+
+func Test_walk(t *testing.T) {
+	type args struct {
+		dir string
+		fn  func(string, os.FileInfo) error
+	}
+
+	type testcase struct {
+		name    string
+		args    args
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name: "basic",
+			args: args{
+				dir: "./",
+				fn: func(filename string, info os.FileInfo) (err error) {
+					return
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "with error",
+			args: args{
+				dir: "./",
+				fn: func(filename string, info os.FileInfo) (err error) {
+					return io.EOF
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "break",
+			args: args{
+				dir: "./",
+				fn: func(filename string, info os.FileInfo) (err error) {
+					return errBreak
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "with directory error",
+			args: args{
+				dir: "./testing",
+				fn: func(filename string, info os.FileInfo) (err error) {
+					return
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := walk(tt.args.dir, tt.args.fn); (err != nil) != tt.wantErr {
+				t.Errorf("walk() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
