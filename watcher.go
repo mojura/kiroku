@@ -21,6 +21,7 @@ func newWatcher(ctx context.Context, opts Options, onTrigger func(Filename) erro
 	w.ts = ts
 	// Increment jobs waiter
 	w.jobs.Add(1)
+
 	// Initialize watch job
 	go w.watch()
 	// Associate returning pointer to created Producer
@@ -100,13 +101,19 @@ func (w *watcher) process() (ok bool, err error) {
 }
 
 func (w *watcher) getNext() (filename Filename, ok bool, err error) {
+	cleanDir := filepath.Clean(w.opts.Dir)
 	fn := func(iteratingName string, info os.FileInfo) (err error) {
-		truncated := filepath.Base(iteratingName)
 		if info.IsDir() {
 			// We are not interested in directories, return
 			return
 		}
 
+		if filepath.Dir(iteratingName) != cleanDir {
+			// Current item is not in the same directory, return
+			return
+		}
+
+		truncated := filepath.Base(iteratingName)
 		// Check to see if current file is a match for the current name and prefix
 		if filename, err = parseFilename(truncated); err != nil {
 			err = nil
