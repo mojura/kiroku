@@ -416,6 +416,7 @@ func TestProducer_Meta(t *testing.T) {
 				t.Errorf("Consumer.Meta() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(gotMeta, tt.wantMeta) {
 				t.Errorf("Consumer.Meta() = %v, want %v", gotMeta, tt.wantMeta)
 			}
