@@ -28,9 +28,14 @@ type IOSource struct {
 	dir string
 }
 
-func (i *IOSource) Export(ctx context.Context, filename string, r io.Reader) (newFilename string, err error) {
+func (i *IOSource) Export(ctx context.Context, prefix, filename string, r io.Reader) (newFilename string, err error) {
 	var f *os.File
-	filepath := path.Join(i.dir, filename)
+	dir := path.Join(i.dir, prefix)
+	if err = os.MkdirAll(dir, 0744); err != nil {
+		return
+	}
+
+	filepath := path.Join(dir, filename)
 	if f, err = os.Create(filepath); err != nil {
 		err = fmt.Errorf("error creating file <%s>: %v", filename, err)
 		return
@@ -45,9 +50,10 @@ func (i *IOSource) Export(ctx context.Context, filename string, r io.Reader) (ne
 	return
 }
 
-func (i *IOSource) Import(ctx context.Context, filename string, w io.Writer) (err error) {
+func (i *IOSource) Import(ctx context.Context, prefix, filename string, w io.Writer) (err error) {
 	var f *os.File
-	filepath := path.Join(i.dir, filename)
+	dir := path.Join(i.dir, prefix)
+	filepath := path.Join(dir, filename)
 	if f, err = os.Open(filepath); err != nil {
 		err = os.ErrNotExist
 		return
@@ -61,9 +67,10 @@ func (i *IOSource) Import(ctx context.Context, filename string, w io.Writer) (er
 	return
 }
 
-func (i *IOSource) Get(ctx context.Context, filename string, fn func(io.Reader) error) (err error) {
+func (i *IOSource) Get(ctx context.Context, prefix, filename string, fn func(io.Reader) error) (err error) {
 	var f *os.File
-	filepath := path.Join(i.dir, filename)
+	dir := path.Join(i.dir, prefix)
+	filepath := path.Join(dir, filename)
 	if f, err = os.Open(filepath); err != nil {
 		err = os.ErrNotExist
 		return

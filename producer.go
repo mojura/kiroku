@@ -193,7 +193,7 @@ func (p *Producer) export(filename Filename) (err error) {
 	defer f.Close()
 
 	var newFilename string
-	if newFilename, err = p.src.Export(context.Background(), filename.String(), f); err != nil {
+	if newFilename, err = p.src.Export(context.Background(), p.opts.FullName(), filename.String(), f); err != nil {
 		err = fmt.Errorf("error exporting <%s>: %v", filename.String(), err)
 		return
 	}
@@ -212,7 +212,7 @@ func (p *Producer) export(filename Filename) (err error) {
 
 	rdr := strings.NewReader(filename.String())
 	snapshotName := getSnapshotName(p.opts.FullName())
-	if _, err = p.src.Export(context.Background(), snapshotName, rdr); err != nil {
+	if _, err = p.src.Export(context.Background(), "_latestSnapshots", snapshotName, rdr); err != nil {
 		err = fmt.Errorf("error setting latest snapshot: %v", err)
 		return
 	}

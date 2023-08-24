@@ -10,6 +10,7 @@ import (
 
 func TestNOOP_Export(t *testing.T) {
 	type args struct {
+		prefix   string
 		filename string
 		r        io.Reader
 	}
@@ -36,7 +37,7 @@ func TestNOOP_Export(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			n := &NOOP{}
-			gotFilename, err := n.Export(context.Background(), tt.args.filename, tt.args.r)
+			gotFilename, err := n.Export(context.Background(), tt.args.prefix, tt.args.filename, tt.args.r)
 			if gotFilename != tt.wantFilename {
 				t.Errorf("NOOP.Export() filename = %v, wantFiename %v", gotFilename, tt.wantFilename)
 			}
@@ -50,6 +51,7 @@ func TestNOOP_Export(t *testing.T) {
 
 func TestNOOP_Import(t *testing.T) {
 	type args struct {
+		prefix   string
 		filename string
 		w        io.Writer
 	}
@@ -73,7 +75,7 @@ func TestNOOP_Import(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			n := &NOOP{}
-			if err := n.Import(context.Background(), tt.args.filename, tt.args.w); (err != nil) != tt.wantErr {
+			if err := n.Import(context.Background(), tt.args.prefix, tt.args.filename, tt.args.w); (err != nil) != tt.wantErr {
 				t.Errorf("NOOP.Export() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -82,6 +84,7 @@ func TestNOOP_Import(t *testing.T) {
 
 func TestNOOP_Get(t *testing.T) {
 	type args struct {
+		prefix   string
 		filename string
 	}
 
@@ -103,7 +106,7 @@ func TestNOOP_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			n := &NOOP{}
-			if err := n.Get(context.Background(), tt.args.filename, func(r io.Reader) error {
+			if err := n.Get(context.Background(), tt.args.prefix, tt.args.filename, func(r io.Reader) error {
 				return nil
 			}); (err != nil) != tt.wantErr {
 				t.Errorf("NOOP.Export() error = %v, wantErr %v", err, tt.wantErr)

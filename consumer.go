@@ -245,7 +245,7 @@ func (c *Consumer) getLatestSnapshot() (err error) {
 
 func (c *Consumer) getLatestSnapshotFilename() (filename string, err error) {
 	snapshotFilename := getSnapshotName(c.opts.FullName())
-	err = c.src.Get(c.ctx, snapshotFilename, func(r io.Reader) (err error) {
+	err = c.src.Get(c.ctx, "_latestSnapshots", snapshotFilename, func(r io.Reader) (err error) {
 		buf := bytes.NewBuffer(nil)
 		_, err = io.Copy(buf, r)
 		switch err {
@@ -300,7 +300,7 @@ func (c *Consumer) downloadTemp(filename string) (tmpFilepath string, err error)
 	}
 	defer tmp.Close()
 
-	if err = c.src.Import(c.ctx, filename, tmp); err != nil {
+	if err = c.src.Import(c.ctx, c.opts.FullName(), filename, tmp); err != nil {
 		err = fmt.Errorf("error downloading from source: %v", err)
 		return
 	}

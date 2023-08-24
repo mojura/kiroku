@@ -46,7 +46,7 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 }
 
 func getSnapshotName(name string) string {
-	return fmt.Sprintf("_latestSnapshots/%s.txt", name)
+	return fmt.Sprintf("%s.txt", name)
 }
 
 func isNilSource(s Source) (isNil bool) {
