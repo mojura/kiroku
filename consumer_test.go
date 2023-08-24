@@ -577,7 +577,7 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 	}
 }
 
-func TestConsumer_isAfter(t *testing.T) {
+func TestConsumer_shouldDownload(t *testing.T) {
 	type args struct {
 		latestSnapshot string
 	}
@@ -702,14 +702,14 @@ func TestConsumer_isAfter(t *testing.T) {
 				_ = c.Close()
 			}
 
-			gotAfter, err := c.isAfter(tt.args.latestSnapshot)
+			gotAfter, err := c.shouldDownload(tt.args.latestSnapshot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Consumer.Meta() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if gotAfter != tt.wantAfter {
-				t.Errorf("Consumer.isAfter() = %v, want %v", gotAfter, tt.wantAfter)
+				t.Errorf("Consumer.shouldDownload() = %v, want %v", gotAfter, tt.wantAfter)
 			}
 		})
 	}
