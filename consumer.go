@@ -196,6 +196,17 @@ func (c *Consumer) getNext() (err error) {
 		return
 	}
 
+	var inRange bool
+	if inRange, err = c.isWithinRange(filename); err != nil {
+		err = fmt.Errorf("error checking if filename <%s> is within range: %v", filename, err)
+		return
+	}
+
+	if !inRange {
+		err = io.EOF
+		return
+	}
+
 	if err = c.download(filename); err != nil {
 		err = fmt.Errorf("error downloading <%s>: %v", filename, err)
 		return
@@ -204,7 +215,22 @@ func (c *Consumer) getNext() (err error) {
 	return
 }
 
-func (c *Consumer) isAfter(latestSnapshot string) (after bool, err error) {
+func (c *Consumer) isWithinRange(filename string) (inRange bool, err error) {
+	if c.opts.RangeEnd.IsZero() {
+		return true, nil
+	}
+
+	var parsed Filename
+	if parsed, err = parseFilename(filename); err != nil {
+		return
+	}
+
+	rangeEnd := c.opts.RangeEnd.UnixNano()
+	inRange = rangeEnd >= parsed.createdAt
+	return
+}
+
+func (c *Consumer) shouldDownload(latestSnapshot string) (should bool, err error) {
 	if len(latestSnapshot) == 0 {
 		return
 	}
@@ -214,12 +240,18 @@ func (c *Consumer) isAfter(latestSnapshot string) (after bool, err error) {
 		return
 	}
 
-	if after, err = wasCreatedAfter(latestSnapshot, meta.LastProcessedTimestamp); err != nil {
-		err = fmt.Errorf("error determining if snapshot <%s> was created after %v: %v", latestSnapshot, meta.LastProcessedTimestamp, err)
+	var parsed Filename
+	if parsed, err = parseFilename(latestSnapshot); err != nil {
+		err = fmt.Errorf("error determining if should download snapshot <%s>: %v", latestSnapshot, err)
 		return
 	}
 
-	return
+	if !c.opts.RangeEnd.IsZero() && c.opts.RangeEnd.UnixNano() < parsed.createdAt {
+		return
+	}
+
+	// If the latest snapshot timestamp is after the last processed timestamp, we should download
+	return meta.LastProcessedTimestamp < parsed.createdAt, nil
 }
 
 func (c *Consumer) getLatestSnapshot() (err error) {
@@ -235,8 +267,8 @@ func (c *Consumer) getLatestSnapshot() (err error) {
 		return
 	}
 
-	var after bool
-	if after, err = c.isAfter(latestSnapshot); err != nil || !after {
+	var should bool
+	if should, err = c.shouldDownload(latestSnapshot); err != nil || !should {
 		return
 	}
 
