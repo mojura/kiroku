@@ -68,6 +68,11 @@ func newConsumer(ctx context.Context, opts Options, src Source, onUpdate UpdateF
 		return
 	}
 
+	rangeStart := opts.RangeStart.UnixNano() - 1
+	if c.m.Get().LastProcessedTimestamp < rangeStart {
+		c.m.Set(Meta{LastProcessedTimestamp: rangeStart})
+	}
+
 	c.ctx, c.close = context.WithCancel(ctx)
 	c.opts = opts
 	c.src = src
