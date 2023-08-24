@@ -173,7 +173,6 @@ func (c *Consumer) oneShot() (err error) {
 }
 
 func (c *Consumer) getNext() (err error) {
-	prefix := c.opts.FullName() + "."
 	var meta Meta
 	if meta, err = c.Meta(); err != nil {
 		return
@@ -181,7 +180,7 @@ func (c *Consumer) getNext() (err error) {
 
 	var filename string
 	lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
-	filename, err = c.src.GetNext(c.ctx, prefix, lastFile.String())
+	filename, err = c.src.GetNext(c.ctx, c.opts.FullName(), lastFile.String())
 	switch err {
 	case nil:
 	case io.EOF:
@@ -292,7 +291,6 @@ func (c *Consumer) download(filename string) (err error) {
 
 func (c *Consumer) downloadTemp(filename string) (tmpFilepath string, err error) {
 	var tmp *os.File
-	//	tmpFilepath = path.Join(os.TempDir(), "_downloading."+filename)
 	tmpFilepath = path.Join(c.opts.Dir, "_downloading."+filename)
 	if tmp, err = createFile(tmpFilepath); err != nil {
 		err = fmt.Errorf("error creating chunk: %v", err)
