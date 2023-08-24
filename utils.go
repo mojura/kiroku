@@ -85,15 +85,6 @@ func sleep(ctx context.Context, sleepDuration time.Duration) (err error) {
 	return
 }
 
-func wasCreatedAfter(filename string, timestamp int64) (after bool, err error) {
-	var parsed Filename
-	if parsed, err = parseFilename(filename); err != nil {
-		return
-	}
-
-	return timestamp < parsed.createdAt, nil
-}
-
 func handleTwoErrors(a, b error) (err error) {
 	switch {
 	case a != nil:
