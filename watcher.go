@@ -127,16 +127,18 @@ func (w *watcher) getNext() (filename Filename, ok bool, err error) {
 		for _, t := range w.ts {
 			if filename.filetype == t {
 				ok = true
-				break
+				return errBreak
 			}
 		}
 
-		// Return break
-		return errBreak
+		return
 	}
 
 	// Iterate through files within directory
-	err = walk(w.opts.Dir, fn)
+	if err = walk(w.opts.Dir, fn); err == errBreak {
+		err = nil
+	}
+
 	return
 }
 
