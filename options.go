@@ -36,8 +36,9 @@ type Options struct {
 	Name      string `toml:"name" json:"name"`
 	Namespace string `toml:"namespace" json:"namespace"`
 
-	OnLog   func(message string)
-	OnError func(err error)
+	OnLog    func(message string)
+	OnError  func(err error)
+	OnResume func()
 
 	AvoidExportOnClose  bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
 	AvoidProcessOnClose bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`

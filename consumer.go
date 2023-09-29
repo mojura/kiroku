@@ -142,16 +142,31 @@ func (c *Consumer) scan() {
 		return
 	}
 
+	var hasError bool
+	resume := func() {}
+	if c.opts.OnResume != nil {
+		resume = func() {
+			if !hasError {
+				return
+			}
+
+			hasError = false
+			go c.opts.OnResume()
+		}
+	}
+
 	for err == nil && !isClosed(c.ctx) {
 		err = c.sync()
 		switch err {
 		case nil:
+			resume()
 		case io.EOF:
+			resume()
 			err = sleep(c.ctx, c.opts.EndOfResultsDelay)
-
 		default:
 			err = fmt.Errorf("Consumer.scan(): error updating: %v", err)
 			c.opts.OnError(err)
+			hasError = true
 			err = sleep(c.ctx, c.opts.ErrorDelay)
 		}
 	}
