@@ -1248,3 +1248,216 @@ func TestConsumer_scan(t *testing.T) {
 		})
 	}
 }
+
+func TestConsumer_isWithinCapcity(t *testing.T) {
+	type fields struct {
+		opts        Options
+		queueLength int64
+	}
+
+	type testcase struct {
+		name    string
+		fields  fields
+		prepare func(opts *Options, dir string) (err error)
+		wantOk  bool
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name: "no capacity",
+			fields: fields{
+				opts: Options{
+					Name: "foo",
+				},
+				queueLength: 0,
+			},
+			wantOk:  true,
+			wantErr: false,
+		},
+		{
+			name: "with capacity",
+			fields: fields{
+				opts: Options{
+					Name:              "foo",
+					ConsumerFileLimit: 3,
+				},
+				queueLength: 0,
+			},
+			prepare: func(opts *Options, dir string) (err error) {
+				var c io.Closer
+				if c, err = os.Create(path.Join(dir, "foo.12345.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+				return
+			},
+			wantOk:  true,
+			wantErr: false,
+		},
+		{
+			name: "at capacity",
+			fields: fields{
+				opts: Options{
+					Name:              "foo",
+					ConsumerFileLimit: 3,
+				},
+				queueLength: 0,
+			},
+			prepare: func(opts *Options, dir string) (err error) {
+				var c io.Closer
+				if c, err = os.Create(path.Join(dir, "foo.12345.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+
+				if c, err = os.Create(path.Join(dir, "foo.12346.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+
+				if c, err = os.Create(path.Join(dir, "foo.12347.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+				return
+			},
+			wantOk:  true,
+			wantErr: false,
+		},
+		{
+			name: "over capacity with unrelated file",
+			fields: fields{
+				opts: Options{
+					Name:              "foo",
+					ConsumerFileLimit: 3,
+				},
+				queueLength: 3,
+			},
+			prepare: func(opts *Options, dir string) (err error) {
+				var c io.Closer
+				if c, err = os.Create(path.Join(dir, "foo.12345.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+
+				if c, err = os.Create(path.Join(dir, "bar.12346.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+
+				if c, err = os.Create(path.Join(dir, "foo.12347.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+				return
+			},
+			wantOk:  true,
+			wantErr: false,
+		},
+		{
+			name: "over capacity",
+			fields: fields{
+				opts: Options{
+					Name:              "foo",
+					ConsumerFileLimit: 3,
+				},
+				queueLength: 0,
+			},
+			prepare: func(opts *Options, dir string) (err error) {
+				var c io.Closer
+				if c, err = os.Create(path.Join(dir, "foo.12345.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+
+				if c, err = os.Create(path.Join(dir, "foo.12346.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+
+				if c, err = os.Create(path.Join(dir, "foo.12347.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+
+				if c, err = os.Create(path.Join(dir, "foo.12348.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+
+				return
+			},
+			wantOk:  true,
+			wantErr: false,
+		},
+		{
+			name: "reset length",
+			fields: fields{
+				opts: Options{
+					Name:              "foo",
+					ConsumerFileLimit: 3,
+				},
+				queueLength: 3,
+			},
+			prepare: func(opts *Options, dir string) (err error) {
+				var c io.Closer
+				if c, err = os.Create(path.Join(dir, "foo.12345.chunk.kir")); err != nil {
+					return
+				}
+				_ = c.Close()
+				return
+			},
+			wantOk:  true,
+			wantErr: false,
+		},
+		{
+			name: "error walking",
+			fields: fields{
+				opts: Options{
+					Name:              "foo",
+					ConsumerFileLimit: 3,
+				},
+				queueLength: 10,
+			},
+			prepare: func(opts *Options, dir string) (err error) {
+				opts.Dir = ""
+				return
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dirName := fmt.Sprintf("test_dir_%d", time.Now().UnixNano())
+			if err := os.Mkdir(dirName, 0744); err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(dirName)
+
+			opts := tt.fields.opts
+			opts.Dir = dirName
+			if tt.prepare != nil {
+				if err := tt.prepare(&opts, dirName); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			c := &Consumer{
+				opts:        opts,
+				queueLength: tt.fields.queueLength,
+			}
+
+			gotOk, err := c.isWithinCapcity()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Consumer.isWithinCapcity() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotOk != tt.wantOk {
+				t.Errorf("Consumer.isWithinCapcity() = %v, want %v", gotOk, tt.wantOk)
+			}
+		})
+	}
+}
