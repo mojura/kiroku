@@ -194,6 +194,7 @@ func (c *Consumer) isWithinCapcity() (ok bool, err error) {
 	}
 
 	ok = c.queueLength < c.opts.ConsumerFileLimit
+	c.queueLength++
 	return
 }
 
