@@ -42,6 +42,8 @@ type Options struct {
 	AvoidExportOnClose  bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
 	AvoidProcessOnClose bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
 
+	ConsumerFileLimit int64 `toml:"consumer_file_limit" json:"consumerFileLimit"`
+
 	// BatchDuration represents the amount of time to keep a transaction open for a
 	// Batch operation
 	BatchDuration time.Duration `toml:"batch_duration" json:"batchDuration"`

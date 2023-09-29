@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 
 	"github.com/hatchify/errors"
@@ -93,6 +95,9 @@ type Consumer struct {
 
 	w *watcher
 
+	// Queue length is only used when capacity is set
+	queueLength int64
+
 	opts     Options
 	src      Source
 	onUpdate UpdateFunc
@@ -177,7 +182,52 @@ func (c *Consumer) oneShot() (err error) {
 	return
 }
 
+func (c *Consumer) isWithinCapcity() (ok bool, err error) {
+	if c.opts.ConsumerFileLimit <= 0 {
+		return true, nil
+	}
+
+	if c.queueLength >= c.opts.ConsumerFileLimit {
+		if c.queueLength, err = c.getQueueLength(); err != nil {
+			return
+		}
+	}
+
+	ok = c.queueLength < c.opts.ConsumerFileLimit
+	return
+}
+
+func (c *Consumer) getQueueLength() (n int64, err error) {
+	err = filepath.Walk(c.opts.Dir, func(path string, info fs.FileInfo, ierr error) (err error) {
+		if ierr != nil {
+			return ierr
+		}
+
+		var fn Filename
+		base := filepath.Base(path)
+		if fn, err = parseFilename(base); err != nil {
+			return nil
+		}
+
+		if fn.name != c.opts.FullName() {
+			return nil
+		}
+
+		n++
+		return nil
+	})
+
+	return
+}
+
 func (c *Consumer) getNext() (err error) {
+	var ok bool
+	if ok, err = c.isWithinCapcity(); err != nil {
+		return
+	} else if !ok {
+		return io.EOF
+	}
+
 	var meta Meta
 	if meta, err = c.Meta(); err != nil {
 		return
