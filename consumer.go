@@ -221,7 +221,7 @@ func (c *Consumer) getQueueLength() (n int64, err error) {
 
 		var fn Filename
 		base := filepath.Base(path)
-		if fn, err = parseFilename(base); err != nil {
+		if fn, err = ParseFilename(base); err != nil {
 			return nil
 		}
 
@@ -287,7 +287,7 @@ func (c *Consumer) isWithinRange(filename string) (inRange bool, err error) {
 	}
 
 	var parsed Filename
-	if parsed, err = parseFilename(filename); err != nil {
+	if parsed, err = ParseFilename(filename); err != nil {
 		return
 	}
 
@@ -307,7 +307,7 @@ func (c *Consumer) shouldDownload(latestSnapshot string) (should bool, err error
 	}
 
 	var parsed Filename
-	if parsed, err = parseFilename(latestSnapshot); err != nil {
+	if parsed, err = ParseFilename(latestSnapshot); err != nil {
 		err = fmt.Errorf("error determining if should download snapshot <%s>: %v", latestSnapshot, err)
 		return
 	}
@@ -382,7 +382,7 @@ func (c *Consumer) download(filename string) (err error) {
 	}
 
 	var fnm Filename
-	if fnm, err = parseFilename(filename); err != nil {
+	if fnm, err = ParseFilename(filename); err != nil {
 		err = fmt.Errorf("error parsing filename <%s>: %v", filename, err)
 		return
 	}
