@@ -13,7 +13,7 @@ func makeFilename(name string, createdAt int64, filetype Type) (f Filename) {
 	return
 }
 
-func parseFilename(filename string) (parsed Filename, err error) {
+func ParseFilename(filename string) (parsed Filename, err error) {
 	spl := strings.Split(filename, ".")
 	if len(spl) != 4 {
 		err = fmt.Errorf("invalid number of filename parts, expected 4 and received %d", len(spl))

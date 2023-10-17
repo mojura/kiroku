@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func Test_parseFilename(t *testing.T) {
+func Test_ParseFilename(t *testing.T) {
 	type args struct {
 		filename string
 	}
@@ -73,14 +73,14 @@ func Test_parseFilename(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotParsed, err := parseFilename(tt.args.filename)
+			gotParsed, err := ParseFilename(tt.args.filename)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseFilename() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ParseFilename() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !reflect.DeepEqual(gotParsed, tt.wantParsed) {
-				t.Errorf("parseFilename() = %v, want %v", gotParsed, tt.wantParsed)
+				t.Errorf("ParseFilename() = %v, want %v", gotParsed, tt.wantParsed)
 			}
 		})
 	}

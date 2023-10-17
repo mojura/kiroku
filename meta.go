@@ -9,7 +9,7 @@ var (
 
 func makeMetaFromFilename(filename string) (m Meta, err error) {
 	var parsed Filename
-	if parsed, err = parseFilename(filename); err != nil {
+	if parsed, err = ParseFilename(filename); err != nil {
 		return
 	}
 

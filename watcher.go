@@ -115,7 +115,7 @@ func (w *watcher) getNext() (filename Filename, ok bool, err error) {
 
 		truncated := filepath.Base(iteratingName)
 		// Check to see if current file is a match for the current name and prefix
-		if filename, err = parseFilename(truncated); err != nil {
+		if filename, err = ParseFilename(truncated); err != nil {
 			err = nil
 			return
 		}
