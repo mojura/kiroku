@@ -120,12 +120,12 @@ func (w *watcher) getNext() (filename Filename, ok bool, err error) {
 			return
 		}
 
-		if filename.name != w.opts.FullName() {
+		if filename.Name != w.opts.FullName() {
 			return
 		}
 
 		for _, t := range w.ts {
-			if filename.filetype == t {
+			if filename.Filetype == t {
 				ok = true
 				return errBreak
 			}

@@ -802,7 +802,7 @@ func TestProducer_transaction(t *testing.T) {
 				}
 
 				if tt.fields.adjustFilename {
-					w.filename.name = "EMPTY"
+					w.filename.Name = "EMPTY"
 				}
 
 				if tt.fields.returnError {

@@ -13,8 +13,8 @@ func makeMetaFromFilename(filename string) (m Meta, err error) {
 		return
 	}
 
-	m.LastProcessedTimestamp = parsed.createdAt
-	m.LastProcessedType = parsed.filetype
+	m.LastProcessedTimestamp = parsed.CreatedAt
+	m.LastProcessedType = parsed.Filetype
 	return
 }
 

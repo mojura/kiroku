@@ -164,7 +164,7 @@ func (p *Producer) Close() (err error) {
 
 func (p *Producer) rename(f Filename, t Type) (err error) {
 	newName := f
-	newName.filetype = t
+	newName.Filetype = t
 
 	oldFilename := path.Join(p.opts.Dir, f.String())
 	// Set filename as directory and name joined
@@ -206,7 +206,7 @@ func (p *Producer) export(filename Filename) (err error) {
 
 	p.m.Set(m)
 
-	if filename.filetype != TypeSnapshot {
+	if filename.Filetype != TypeSnapshot {
 		return
 	}
 
