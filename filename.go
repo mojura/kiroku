@@ -7,9 +7,9 @@ import (
 )
 
 func makeFilename(name string, createdAt int64, filetype Type) (f Filename) {
-	f.name = name
-	f.createdAt = createdAt
-	f.filetype = filetype
+	f.Name = name
+	f.CreatedAt = createdAt
+	f.Filetype = filetype
 	return
 }
 
@@ -20,12 +20,12 @@ func ParseFilename(filename string) (parsed Filename, err error) {
 		return
 	}
 
-	if parsed.createdAt, err = strconv.ParseInt(spl[1], 10, 64); err != nil {
+	if parsed.CreatedAt, err = strconv.ParseInt(spl[1], 10, 64); err != nil {
 		return
 	}
 
-	parsed.name = spl[0]
-	if parsed.filetype, err = parseType(spl[2]); err != nil {
+	parsed.Name = spl[0]
+	if parsed.Filetype, err = parseType(spl[2]); err != nil {
 		return
 	}
 
@@ -38,17 +38,17 @@ func ParseFilename(filename string) (parsed Filename, err error) {
 }
 
 type Filename struct {
-	name      string
-	createdAt int64
-	filetype  Type
+	Name      string
+	CreatedAt int64
+	Filetype  Type
 }
 
 func (f Filename) String() string {
-	return fmt.Sprintf("%s.%d.%s.kir", f.name, f.createdAt, f.filetype)
+	return fmt.Sprintf("%s.%d.%s.kir", f.Name, f.CreatedAt, f.Filetype)
 }
 
 func (f Filename) toMeta() (m Meta) {
-	m.LastProcessedTimestamp = f.createdAt
-	m.LastProcessedType = f.filetype
+	m.LastProcessedTimestamp = f.CreatedAt
+	m.LastProcessedType = f.Filetype
 	return
 }

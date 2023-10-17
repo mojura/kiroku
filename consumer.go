@@ -225,7 +225,7 @@ func (c *Consumer) getQueueLength() (n int64, err error) {
 			return nil
 		}
 
-		if fn.name != c.opts.FullName() {
+		if fn.Name != c.opts.FullName() {
 			return nil
 		}
 
@@ -292,7 +292,7 @@ func (c *Consumer) isWithinRange(filename string) (inRange bool, err error) {
 	}
 
 	rangeEnd := c.opts.RangeEnd.UnixNano()
-	inRange = rangeEnd >= parsed.createdAt
+	inRange = rangeEnd >= parsed.CreatedAt
 	return
 }
 
@@ -312,12 +312,12 @@ func (c *Consumer) shouldDownload(latestSnapshot string) (should bool, err error
 		return
 	}
 
-	if !c.opts.RangeEnd.IsZero() && c.opts.RangeEnd.UnixNano() < parsed.createdAt {
+	if !c.opts.RangeEnd.IsZero() && c.opts.RangeEnd.UnixNano() < parsed.CreatedAt {
 		return
 	}
 
 	// If the latest snapshot timestamp is after the last processed timestamp, we should download
-	return meta.LastProcessedTimestamp < parsed.createdAt, nil
+	return meta.LastProcessedTimestamp < parsed.CreatedAt, nil
 }
 
 func (c *Consumer) getLatestSnapshot() (err error) {
@@ -413,7 +413,7 @@ func (c *Consumer) onChunk(filename Filename) (err error) {
 	// Process chunk
 	filepath := path.Join(c.opts.Dir, filename.String())
 	if err = Read(filepath, func(r *Reader) (err error) {
-		return c.onUpdate(filename.filetype, r)
+		return c.onUpdate(filename.Filetype, r)
 	}); err != nil {
 		err = fmt.Errorf("error encountered while processing: %v", err)
 		return
