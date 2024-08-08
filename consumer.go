@@ -79,6 +79,7 @@ func newConsumer(ctx context.Context, opts Options, src Source, onUpdate UpdateF
 	c.opts = opts
 	c.src = src
 	c.onUpdate = onUpdate
+	c.queueLength, err = c.getQueueLength()
 
 	c.w = newWatcher(c.ctx, c.opts, c.onChunk, TypeChunk, TypeSnapshot)
 	ref = &c
