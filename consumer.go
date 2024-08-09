@@ -164,6 +164,10 @@ func (c *Consumer) scan() {
 		case nil:
 			resume()
 		case io.EOF:
+			if c.opts.Debugging {
+				fmt.Println("End of results found, sleeping")
+			}
+
 			resume()
 			err = sleep(c.ctx, c.opts.EndOfResultsDelay)
 		default:
