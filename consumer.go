@@ -215,7 +215,7 @@ func (c *Consumer) isWithinCapcity() (ok bool, err error) {
 	c.queueLength++
 
 	if c.opts.Debugging {
-		fmt.Printf("Consumer[%s].isWithinCapacity(): Length %d / Limit %d\n", c.opts.FullName(), c.queueLength, c.opts.ConsumerFileLimit)
+		fmt.Printf("Consumer[%s].isWithinCapacity(): Length %d / Limit %d / Ok %v\n", c.opts.FullName(), c.queueLength, c.opts.ConsumerFileLimit, ok)
 	}
 
 	return
