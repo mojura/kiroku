@@ -40,6 +40,8 @@ type Options struct {
 	OnError  func(err error)
 	OnResume func()
 
+	Debugging bool `toml:"debugging" json:"debugging"`
+
 	AvoidExportOnClose  bool `toml:"avoid_export_on_close" json:"avoidExportOnClose"`
 	AvoidProcessOnClose bool `toml:"avoid_merge_on_close" json:"avoidMergeOnClose"`
 

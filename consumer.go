@@ -213,6 +213,11 @@ func (c *Consumer) isWithinCapcity() (ok bool, err error) {
 
 	ok = c.queueLength < c.opts.ConsumerFileLimit
 	c.queueLength++
+
+	if c.opts.Debugging {
+		fmt.Printf("Consumer[%s].isWithinCapacity(): Length %d / Limit %d\n", c.opts.FullName(), c.queueLength, c.opts.ConsumerFileLimit)
+	}
+
 	return
 }
 
