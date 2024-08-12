@@ -57,7 +57,7 @@ func (w *watcher) watch() {
 		if ok, err = w.process(); err != nil {
 			err = fmt.Errorf("error processing: %v", err)
 			w.opts.OnError(err)
-			w.sleep(time.Minute)
+			w.sleep(w.opts.ErrorDelay)
 		}
 
 		if !ok {
@@ -83,7 +83,7 @@ func (w *watcher) process() (ok bool, err error) {
 	var filename Filename
 	// Get next file for the target prefix
 	if filename, ok, err = w.getNext(); err != nil {
-		err = fmt.Errorf("error getting next %+v filename: <%v>, sleeping for a minute and trying again", w.ts, err)
+		err = fmt.Errorf("error getting next %+v filename: <%v>, sleeping for %v and trying again", w.ts, err, w.opts.EndOfResultsDelay)
 		return
 	}
 
@@ -93,7 +93,7 @@ func (w *watcher) process() (ok bool, err error) {
 
 	// Call provided function
 	if err = w.onTrigger(filename); err != nil {
-		err = fmt.Errorf("error encountered during action for <%s>: <%v>, sleeping for a minute and trying again", filename, err)
+		err = fmt.Errorf("error encountered during action for <%s>: <%v>, sleeping for %v and trying again", filename, err, w.opts.ErrorDelay)
 		return
 	}
 
