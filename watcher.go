@@ -57,7 +57,7 @@ func (w *watcher) watch() {
 		if ok, err = w.process(); err != nil {
 			err = fmt.Errorf("error processing: %v", err)
 			w.opts.OnError(err)
-			w.sleep(time.Minute)
+			w.sleep(w.opts.ErrorDelay)
 		}
 
 		if !ok {
