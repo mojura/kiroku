@@ -229,7 +229,7 @@ func (c *Consumer) isWithinCapcity() (ok bool, err error) {
 func (c *Consumer) getQueueLength() (n int64, err error) {
 	err = filepath.Walk(c.opts.Dir, func(path string, info fs.FileInfo, ierr error) (err error) {
 		if ierr != nil {
-			log.Printf("error opening iterating file: %v\n", err)
+			log.Printf("error opening iterating file: %v\n", ierr)
 			return nil
 		}
 
