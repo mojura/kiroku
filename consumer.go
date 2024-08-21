@@ -76,11 +76,13 @@ func newConsumer(ctx context.Context, opts Options, src Source, onUpdate UpdateF
 
 	rangeStart := opts.RangeStart.UnixNano() - 1
 	if err = c.m.Update(func(meta Meta) (out Meta, err error) {
-		// Set the last processed values as the last downloaded values.
+		// Set the last processed values as the last downloaded values if the values are set
 		// This will ensure that any downloads that did not complete will be re-tried
 		// when this scan process begins
-		meta.LastProcessedTimestamp = meta.LastDownloadedTimestamp
-		meta.LastProcessedType = meta.LastDownloadedType
+		if meta.LastDownloadedTimestamp > 0 {
+			meta.LastProcessedTimestamp = meta.LastDownloadedTimestamp
+			meta.LastProcessedType = meta.LastDownloadedType
+		}
 
 		// Ensure the last processed timestamp is not less than the range start
 		if meta.LastProcessedTimestamp < rangeStart {
