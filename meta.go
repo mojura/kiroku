@@ -27,7 +27,10 @@ func newMetaFromBytes(bs []byte) *Meta {
 type Meta struct {
 	// LastProcessedTimestamp is the last processed timestamp
 	LastProcessedTimestamp int64 `json:"lastProcessedTimestamp"`
-	LastProcessedType      Type  `json:"type"`
+	LastProcessedType      Type  `json:"lastProcessedType"`
+
+	LastDownloadedTimestamp int64 `json:"lastDownloadedTimestamp"`
+	LastDownloadedType      Type  `json:"lastDownloadedType"`
 }
 
 func (m *Meta) IsEmpty() bool {
