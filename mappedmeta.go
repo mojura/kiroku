@@ -57,6 +57,33 @@ func (m *mappedMeta) Set(meta Meta) {
 	*m.m = meta
 }
 
+func (m *mappedMeta) Update(fn func(Meta) (Meta, error)) (err error) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	if m.closed {
+		return
+	}
+
+	var meta Meta
+	if meta, err = fn(*m.m); err != nil {
+		return
+	}
+
+	*m.m = meta
+	return
+}
+
+func (m *mappedMeta) SetDownloaded(createdAt int64, t Type) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	if m.closed {
+		return
+	}
+
+	m.m.LastDownloadedTimestamp = createdAt
+	m.m.LastDownloadedType = t
+}
+
 func (m *mappedMeta) Close() (err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()

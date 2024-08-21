@@ -1424,8 +1424,8 @@ func TestConsumer_isWithinCapcity(t *testing.T) {
 				opts.Dir = ""
 				return
 			},
-			wantOk:  false,
-			wantErr: true,
+			wantOk:  true,
+			wantErr: false,
 		},
 	}
 

@@ -36,8 +36,11 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 		return
 	}
 
-	c.swg.Add(1)
-	go c.scan()
+	c.swg.Add(c.opts.ConsumerConcurrencyCount)
+	for i := 0; i < c.opts.ConsumerConcurrencyCount; i++ {
+		go c.scan()
+	}
+
 	return
 }
 
@@ -72,8 +75,24 @@ func newConsumer(ctx context.Context, opts Options, src Source, onUpdate UpdateF
 	}
 
 	rangeStart := opts.RangeStart.UnixNano() - 1
-	if c.m.Get().LastProcessedTimestamp < rangeStart {
-		c.m.Set(Meta{LastProcessedTimestamp: rangeStart})
+	if err = c.m.Update(func(meta Meta) (out Meta, err error) {
+		// Set the last processed values as the last downloaded values if the values are set
+		// This will ensure that any downloads that did not complete will be re-tried
+		// when this scan process begins
+		if meta.LastDownloadedTimestamp > 0 {
+			meta.LastProcessedTimestamp = meta.LastDownloadedTimestamp
+			meta.LastProcessedType = meta.LastDownloadedType
+		}
+
+		// Ensure the last processed timestamp is not less than the range start
+		if meta.LastProcessedTimestamp < rangeStart {
+			meta.LastProcessedTimestamp = rangeStart
+		}
+
+		out = meta
+		return
+	}); err != nil {
+		return
 	}
 
 	c.ctx, c.close = context.WithCancel(ctx)
@@ -258,32 +277,42 @@ func (c *Consumer) getNext() (err error) {
 		return io.EOF
 	}
 
-	var meta Meta
-	if meta, err = c.Meta(); err != nil {
-		return
-	}
-
 	var filename string
-	lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
-	filename, err = c.src.GetNext(c.ctx, c.opts.FullName(), lastFile.String())
-	switch err {
-	case nil:
-	case io.EOF:
-		return
+	if err = c.m.Update(func(meta Meta) (out Meta, err error) {
+		lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
+		filename, err = c.src.GetNext(c.ctx, c.opts.FullName(), lastFile.String())
+		switch err {
+		case nil:
+		case io.EOF:
+			return
 
-	default:
-		err = fmt.Errorf("error getting next: %v", err)
-		return
-	}
+		default:
+			err = fmt.Errorf("error getting next: %v", err)
+			return
+		}
 
-	var inRange bool
-	if inRange, err = c.isWithinRange(filename); err != nil {
-		err = fmt.Errorf("error checking if filename <%s> is within range: %v", filename, err)
-		return
-	}
+		var parsed Filename
+		if parsed, err = ParseFilename(filename); err != nil {
+			return
+		}
 
-	if !inRange {
-		err = io.EOF
+		var inRange bool
+		if inRange, err = c.isWithinRange(parsed); err != nil {
+			err = fmt.Errorf("error checking if filename <%s> is within range: %v", filename, err)
+			return
+		}
+
+		if !inRange {
+			err = io.EOF
+			return
+		}
+
+		// Set last processed
+		meta.LastProcessedTimestamp = parsed.CreatedAt
+		meta.LastProcessedType = parsed.Filetype
+		out = meta
+		return
+	}); err != nil {
 		return
 	}
 
@@ -295,18 +324,13 @@ func (c *Consumer) getNext() (err error) {
 	return
 }
 
-func (c *Consumer) isWithinRange(filename string) (inRange bool, err error) {
+func (c *Consumer) isWithinRange(filename Filename) (inRange bool, err error) {
 	if c.opts.RangeEnd.IsZero() {
 		return true, nil
 	}
 
-	var parsed Filename
-	if parsed, err = ParseFilename(filename); err != nil {
-		return
-	}
-
 	rangeEnd := c.opts.RangeEnd.UnixNano()
-	inRange = rangeEnd >= parsed.CreatedAt
+	inRange = rangeEnd >= filename.CreatedAt
 	return
 }
 
@@ -401,7 +425,7 @@ func (c *Consumer) download(filename string) (err error) {
 		return
 	}
 
-	c.m.Set(fnm.toMeta())
+	c.m.SetDownloaded(fnm.CreatedAt, fnm.Filetype)
 	c.w.trigger()
 	return
 }
