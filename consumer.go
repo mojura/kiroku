@@ -121,6 +121,11 @@ type Consumer struct {
 	// Queue length is only used when capacity is set
 	queueLength int64
 
+	// List of filenames to download from, when this is empty - more can be replenished
+	// Note: This is only accessed during mappedMeta.Update, this func is what protects
+	// thread safety for filenames
+	f filenames
+
 	opts     Options
 	src      Source
 	onUpdate UpdateFunc
@@ -269,6 +274,30 @@ func (c *Consumer) getQueueLength() (n int64, err error) {
 	return
 }
 
+func (c *Consumer) getNextFilename(meta Meta) (filename string, err error) {
+	var ok bool
+	if filename, ok = c.f.Shift(); ok {
+		return
+	}
+
+	lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
+
+	var filenames []string
+	filenames, err = c.src.GetNextList(c.ctx, c.opts.FullName(), lastFile.String(), c.opts.ConsumerGetNextListSize)
+	switch err {
+	case nil:
+		c.f.Append(filenames)
+		filename, _ = c.f.Shift()
+		return
+	case io.EOF:
+		return
+
+	default:
+		err = fmt.Errorf("error getting next list: %v", err)
+		return
+	}
+}
+
 func (c *Consumer) getNext() (err error) {
 	var ok bool
 	if ok, err = c.isWithinCapcity(); err != nil {
@@ -279,15 +308,7 @@ func (c *Consumer) getNext() (err error) {
 
 	var filename string
 	if err = c.m.Update(func(meta Meta) (out Meta, err error) {
-		lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
-		filename, err = c.src.GetNext(c.ctx, c.opts.FullName(), lastFile.String())
-		switch err {
-		case nil:
-		case io.EOF:
-			return
-
-		default:
-			err = fmt.Errorf("error getting next: %v", err)
+		if filename, err = c.getNextFilename(meta); err != nil {
 			return
 		}
 
