@@ -28,7 +28,7 @@ func walk(dir string, fn func(string, os.FileInfo) error) (err error) {
 		case ierr == nil:
 			// Call provided function
 			return fn(filename, info)
-		case ierr != nil && filename == dir:
+		case filename == dir:
 			// We've encountered an error with the target directory, return iterating error
 			return ierr
 		default:
