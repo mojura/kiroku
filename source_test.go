@@ -5,12 +5,13 @@ import (
 	"io"
 )
 
-func newMockSource(e exportFn, i importFn, g getFn, gn getNextFn) *mockSource {
+func newMockSource(e exportFn, i importFn, g getFn, gn getNextFn, gnl getNextListFn) *mockSource {
 	var m mockSource
 	m.exportFn = e
 	m.importFn = i
 	m.getFn = g
 	m.getNextFn = gn
+	m.getNextListFn = gnl
 	return &m
 }
 
