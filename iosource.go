@@ -109,3 +109,42 @@ func (i *IOSource) GetNext(ctx context.Context, prefix, lastFilename string) (fi
 
 	return filename, io.EOF
 }
+
+func (i *IOSource) GetNextList(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+	wfn := func(walkingFile string, info os.FileInfo, ierr error) (err error) {
+		if ierr != nil {
+			return
+		}
+
+		if info.IsDir() {
+			return
+		}
+
+		walkingFile = filepath.Base(walkingFile)
+		if walkingFile <= lastFilename {
+			return
+		}
+
+		if strings.Index(walkingFile, prefix) != 0 {
+			return
+		}
+
+		filenames = append(filenames, walkingFile)
+
+		if len(filenames) >= int(maxKeys) {
+			return errBreak
+		}
+
+		return
+	}
+
+	err = filepath.Walk(i.dir, wfn)
+	switch {
+	case err == nil || err == errBreak:
+		return filenames, nil
+	case len(filenames) == 0:
+		return nil, io.EOF
+	default:
+		return nil, err
+	}
+}

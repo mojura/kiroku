@@ -47,6 +47,7 @@ type Options struct {
 
 	ConsumerFileLimit        int64 `toml:"consumer_file_limit" json:"consumerFileLimit"`
 	ConsumerConcurrencyCount int   `toml:"consumer_concurrency_count" json:"consumerConcurrencyCount"`
+	ConsumerGetNextListSize  int64 `toml:"consumer_get_next_list_size" json:"consumerGetNextListSize"`
 
 	// BatchDuration represents the amount of time to keep a transaction open for a
 	// Batch operation
@@ -114,5 +115,13 @@ func (o *Options) fill() {
 
 	if o.ConsumerConcurrencyCount <= 0 {
 		o.ConsumerConcurrencyCount = 1
+	}
+
+	if o.ConsumerFileLimit <= 0 {
+		o.ConsumerFileLimit = 1000
+	}
+
+	if o.ConsumerGetNextListSize <= 0 {
+		o.ConsumerGetNextListSize = o.ConsumerFileLimit * 3
 	}
 }

@@ -26,3 +26,7 @@ func (n *NOOP) Get(ctx context.Context, prefix, filename string, fn func(io.Read
 func (n *NOOP) GetNext(ctx context.Context, prefix, lastFilename string) (filename string, err error) {
 	return "", io.EOF
 }
+
+func (n *NOOP) GetNextList(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+	return []string{}, io.EOF
+}

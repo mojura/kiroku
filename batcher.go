@@ -46,7 +46,7 @@ func (b *batcher) create() (err error) {
 		errCh <- b.createTxn(func(txn *Transaction) (err error) {
 			b.txn = txn
 			ch <- struct{}{}
-			return b.completeTransaction(txn)
+			return b.completeTransaction()
 		})
 	}()
 
@@ -58,7 +58,7 @@ func (b *batcher) create() (err error) {
 	return
 }
 
-func (b *batcher) completeTransaction(txn *Transaction) (err error) {
+func (b *batcher) completeTransaction() (err error) {
 	// Keep transaction open for the batch duration
 	time.Sleep(b.batchDuration)
 	// Attempt to acquire lock before completing the transaction

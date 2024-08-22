@@ -32,6 +32,9 @@ func TestNewProducer(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			wantErr: false,
@@ -49,6 +52,9 @@ func TestNewProducer(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			wantErr: false,
@@ -62,6 +68,9 @@ func TestNewProducer(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				avoidDirectoryCreate: true,
 			},
@@ -76,6 +85,9 @@ func TestNewProducer(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				avoidDirectoryCreate: true,
 			},
@@ -136,6 +148,9 @@ func TestProducer_BatchBlock(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			args: args{
@@ -157,6 +172,9 @@ func TestProducer_BatchBlock(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			args: args{
@@ -182,6 +200,9 @@ func TestProducer_BatchBlock(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			args: args{
@@ -247,6 +268,9 @@ func TestProducer_Snapshot(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			args: args{
@@ -268,6 +292,9 @@ func TestProducer_Snapshot(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			args: args{
@@ -293,6 +320,9 @@ func TestProducer_Snapshot(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			args: args{
@@ -357,6 +387,9 @@ func TestProducer_Meta(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -377,6 +410,9 @@ func TestProducer_Meta(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -450,6 +486,9 @@ func TestProducer_Close(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			wantErr: false,
@@ -468,6 +507,9 @@ func TestProducer_Close(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 			},
 			wantErr: true,
@@ -521,6 +563,9 @@ func TestProducer_exportAndRemove(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype: TypeChunk,
 			},
@@ -550,6 +595,9 @@ func TestProducer_exportAndRemove(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype: TypeSnapshot,
 			},
@@ -567,6 +615,9 @@ func TestProducer_exportAndRemove(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype:    TypeSnapshot,
 				avoidCreate: true,
@@ -587,6 +638,9 @@ func TestProducer_exportAndRemove(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype: TypeChunk,
 			},
@@ -613,6 +667,9 @@ func TestProducer_exportAndRemove(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype: TypeSnapshot,
 			},
@@ -632,6 +689,9 @@ func TestProducer_exportAndRemove(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype: TypeChunk,
 			},
@@ -712,6 +772,9 @@ func TestProducer_transaction(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype: TypeChunk,
 			},
@@ -729,6 +792,9 @@ func TestProducer_transaction(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype:       TypeChunk,
 				adjustFilename: true,
@@ -747,6 +813,9 @@ func TestProducer_transaction(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype:    TypeChunk,
 				returnError: true,
@@ -765,6 +834,9 @@ func TestProducer_transaction(t *testing.T) {
 					func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
 					func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+						return []string{}, nil
+					},
 				),
 				filetype:            TypeChunk,
 				errorCreatingWriter: true,
