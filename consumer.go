@@ -36,7 +36,6 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 		return
 	}
 
-	c.swg.Add(c.opts.ConsumerConcurrencyCount)
 	for i := 0; i < c.opts.ConsumerConcurrencyCount; i++ {
 		go c.scan()
 	}
@@ -400,6 +399,20 @@ func (c *Consumer) getLatestSnapshot() (err error) {
 
 	var should bool
 	if should, err = c.shouldDownload(latestSnapshot); err != nil || !should {
+		return
+	}
+
+	var filename Filename
+	if filename, err = ParseFilename(latestSnapshot); err != nil {
+		return
+	}
+
+	if err = c.m.Update(func(m Meta) (out Meta, err error) {
+		m.LastProcessedTimestamp = filename.CreatedAt
+		m.LastProcessedType = filename.Filetype
+		out = m
+		return
+	}); err != nil {
 		return
 	}
 
