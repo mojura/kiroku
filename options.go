@@ -115,4 +115,8 @@ func (o *Options) fill() {
 	if o.ConsumerConcurrencyCount <= 0 {
 		o.ConsumerConcurrencyCount = 1
 	}
+
+	if o.ConsumerFileLimit <= 0 {
+		o.ConsumerFileLimit = 1000
+	}
 }
