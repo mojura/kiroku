@@ -280,9 +280,12 @@ func (c *Consumer) getNextFilename(meta Meta) (filename string, err error) {
 		return
 	}
 
+	// Our filelist is empty, so we need to repopulate it.
+	// Determine the filename of our last processed file by using the last processed timestamp and type
 	lastFile := makeFilename(c.opts.FullName(), meta.LastProcessedTimestamp, meta.LastProcessedType)
 
 	var filenames []string
+	// Get next batch of filenames starting from immediately after the last file we processed
 	filenames, err = c.src.GetNextList(c.ctx, c.opts.FullName(), lastFile.String(), c.opts.ConsumerGetNextListSize)
 	switch err {
 	case nil:
