@@ -287,7 +287,10 @@ func (c *Consumer) getNextFilename(meta Meta) (filename string, err error) {
 	switch err {
 	case nil:
 		c.f.Append(filenames)
-		filename, _ = c.f.Shift()
+		if filename, ok = c.f.Shift(); !ok {
+			err = io.EOF
+		}
+
 		return
 	case io.EOF:
 		return
