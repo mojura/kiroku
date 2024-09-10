@@ -22,6 +22,8 @@ const (
 	ErrConsumerTransaction = errors.Error("mirrors cannot perform transactions")
 	// ErrConsumerSnapshot is returned when a mirror attempts to snapshot
 	ErrConsumerSnapshot = errors.Error("mirrors cannot perform snapshots")
+	// ErrQueueFull is returned when the queue is full
+	ErrQueueFull = errors.Error("cannot download more, queue full")
 )
 
 // NewConsumer will initialize a new Consumer instance
@@ -56,10 +58,20 @@ func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source
 		return
 	}
 
-	if err = c.oneShot(); err != nil {
-		return
+	var wg sync.WaitGroup
+	for i := 0; i < c.opts.ConsumerConcurrencyCount; i++ {
+		wg.Add(1)
+		go func() {
+			if err = c.oneShot(); err != nil {
+				return
+			}
+
+			wg.Done()
+		}()
+
 	}
 
+	wg.Wait()
 	return c.Close()
 }
 
@@ -194,6 +206,13 @@ func (c *Consumer) scan() {
 
 			resume()
 			err = sleep(c.ctx, c.opts.EndOfResultsDelay)
+		case ErrQueueFull:
+			if c.opts.Debugging {
+				fmt.Println("Queue full, sleeping")
+			}
+
+			resume()
+			err = sleep(c.ctx, c.opts.EndOfResultsDelay)
 		default:
 			err = fmt.Errorf("Consumer.scan(): error updating: %v", err)
 			c.opts.OnError(err)
@@ -217,15 +236,23 @@ func (c *Consumer) oneShot() (err error) {
 		return
 	}
 
-	err = c.sync()
-	switch err {
-	case nil:
-	case io.EOF:
-		err = nil
-	default:
-	}
+	for {
+		err = c.sync()
+		switch err {
+		case ErrQueueFull:
+		case nil:
+			return
+		case io.EOF:
+			return nil
+		default:
+			return err
+		}
 
-	return
+		fmt.Println("Queue full, sleeping")
+		if err = sleep(c.ctx, c.opts.EndOfResultsDelay); err != nil {
+			return
+		}
+	}
 }
 
 func (c *Consumer) isWithinCapcity() (ok bool, err error) {
@@ -308,7 +335,7 @@ func (c *Consumer) getNext() (err error) {
 	if ok, err = c.isWithinCapcity(); err != nil {
 		return
 	} else if !ok {
-		return io.EOF
+		return ErrQueueFull
 	}
 
 	var filename string
