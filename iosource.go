@@ -138,8 +138,11 @@ func (i *IOSource) GetNextList(ctx context.Context, prefix, lastFilename string,
 		return
 	}
 
-	err = filepath.Walk(i.dir, wfn)
+	dir := path.Join(i.dir, prefix)
+	err = filepath.Walk(dir, wfn)
 	switch {
+	case len(filenames) == 0:
+		return nil, io.EOF
 	case err == nil || err == errBreak:
 		return filenames, nil
 	case len(filenames) == 0:
