@@ -38,8 +38,14 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 		return
 	}
 
+	if err = c.getLatestSnapshot(); err != nil {
+		err = fmt.Errorf("Consumer.NewConsumerWithContext(): error getting latest snapshot: %v", err)
+		c.opts.OnError(err)
+		return
+	}
+
 	for i := 0; i < c.opts.ConsumerConcurrencyCount; i++ {
-		go c.scan()
+		go c.scan(false)
 	}
 
 	return
@@ -58,20 +64,17 @@ func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source
 		return
 	}
 
-	var wg sync.WaitGroup
-	for i := 0; i < c.opts.ConsumerConcurrencyCount; i++ {
-		wg.Add(1)
-		go func() {
-			if err = c.oneShot(); err != nil {
-				return
-			}
-
-			wg.Done()
-		}()
-
+	if err = c.getLatestSnapshot(); err != nil {
+		err = fmt.Errorf("Consumer.NewOneShotConsumerWithContext(): error getting latest snapshot: %v", err)
+		c.opts.OnError(err)
+		return
 	}
 
-	wg.Wait()
+	for i := 0; i < c.opts.ConsumerConcurrencyCount; i++ {
+		go c.scan(true)
+	}
+
+	c.swg.Wait()
 	return c.Close()
 }
 
@@ -171,15 +174,10 @@ func (c *Consumer) Close() (err error) {
 	return c.m.Close()
 }
 
-func (c *Consumer) scan() {
+func (c *Consumer) scan(endOnEOF bool) {
 	var err error
 	c.swg.Add(1)
 	defer c.swg.Done()
-	if err = c.getLatestSnapshot(); err != nil {
-		err = fmt.Errorf("Consumer.scan(): error getting latest snapshot: %v", err)
-		c.opts.OnError(err)
-		return
-	}
 
 	var hasError bool
 	resume := func() {}
@@ -200,6 +198,10 @@ func (c *Consumer) scan() {
 		case nil:
 			resume()
 		case io.EOF:
+			if endOnEOF {
+				return
+			}
+
 			if c.opts.Debugging {
 				fmt.Println("End of results found, sleeping")
 			}
@@ -228,31 +230,6 @@ func (c *Consumer) sync() (err error) {
 	}
 
 	return
-}
-
-func (c *Consumer) oneShot() (err error) {
-	if err = c.getLatestSnapshot(); err != nil {
-		err = fmt.Errorf("error getting latest snapshot: %v", err)
-		return
-	}
-
-	for {
-		err = c.sync()
-		switch err {
-		case ErrQueueFull:
-		case nil:
-			return
-		case io.EOF:
-			return nil
-		default:
-			return err
-		}
-
-		fmt.Println("Queue full, sleeping")
-		if err = sleep(c.ctx, c.opts.EndOfResultsDelay); err != nil {
-			return
-		}
-	}
 }
 
 func (c *Consumer) isWithinCapcity() (ok bool, err error) {

@@ -1389,7 +1389,7 @@ func TestConsumer_scan(t *testing.T) {
 				c.Close()
 			}
 
-			c.scan()
+			c.scan(false)
 		})
 	}
 }
