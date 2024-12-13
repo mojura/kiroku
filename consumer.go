@@ -46,6 +46,7 @@ func NewConsumerWithContext(ctx context.Context, opts Options, src Source, onUpd
 		return
 	}
 
+	c.swg.Add(c.opts.ConsumerConcurrencyCount)
 	for i := 0; i < c.opts.ConsumerConcurrencyCount; i++ {
 		go c.scan(false)
 	}
@@ -72,6 +73,7 @@ func NewOneShotConsumerWithContext(ctx context.Context, opts Options, src Source
 		return
 	}
 
+	c.swg.Add(c.opts.ConsumerConcurrencyCount)
 	for i := 0; i < c.opts.ConsumerConcurrencyCount; i++ {
 		go c.scan(true)
 	}
@@ -178,7 +180,6 @@ func (c *Consumer) Close() (err error) {
 
 func (c *Consumer) scan(endOnEOF bool) {
 	var err error
-	c.swg.Add(1)
 	defer c.swg.Done()
 
 	var hasError bool

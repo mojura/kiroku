@@ -8,6 +8,7 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -254,6 +255,40 @@ func TestNewOneShotConsumer(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestNewOneShotConsumer_with_delay(t *testing.T) {
+	var err error
+	if err = os.MkdirAll("./testing", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./testing")
+
+	var opts Options
+	opts.Name = "testing"
+	opts.ConsumerConcurrencyCount = 4
+	opts.ConsumerFileLimit = 1000
+	opts.Dir = "./testing"
+
+	var src Source
+	if src, err = NewIOSource("./test_assets"); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int64
+	onUpdate := func(t Type, r *Reader) (err error) {
+		atomic.AddInt64(&count, 1)
+		time.Sleep(time.Second)
+		return
+	}
+
+	if err = NewOneShotConsumer(opts, src, onUpdate); err != nil {
+		t.Fatal(err)
+	}
+
+	if count != 3 {
+		t.Fatalf("invalid count, expected 3 and received <%d>", count)
 	}
 }
 
