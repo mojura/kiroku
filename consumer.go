@@ -24,6 +24,8 @@ const (
 	ErrConsumerSnapshot = errors.Error("mirrors cannot perform snapshots")
 	// ErrQueueFull is returned when the queue is full
 	ErrQueueFull = errors.Error("cannot download more, queue full")
+	// ErrEmptyList is returned when a list is empty
+	ErrEmptyList = errors.Error("list is empty, please retrieve a new list")
 )
 
 // NewConsumer will initialize a new Consumer instance
@@ -215,6 +217,13 @@ func (c *Consumer) scan(endOnEOF bool) {
 
 			resume()
 			err = sleep(c.ctx, c.opts.EndOfResultsDelay)
+		case ErrEmptyList:
+			if c.opts.Debugging {
+				fmt.Println("Empty list, retrying")
+			}
+
+			resume()
+
 		default:
 			err = fmt.Errorf("Consumer.scan(): error updating: %v", err)
 			c.opts.OnError(err)
@@ -294,7 +303,7 @@ func (c *Consumer) getNextFilename(meta Meta) (filename string, err error) {
 	case nil:
 		c.f.Append(filenames)
 		if filename, ok = c.f.Shift(); !ok {
-			err = io.EOF
+			err = ErrEmptyList
 		}
 
 		return
