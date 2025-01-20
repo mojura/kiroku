@@ -153,7 +153,7 @@ func (i *IOSource) GetNextList(ctx context.Context, prefix, lastFilename string,
 	}
 }
 
-func (i *IOSource) GetHead(ctx context.Context, prefix, filename string) (info Info, err error) {
+func (i *IOSource) GetInfo(ctx context.Context, prefix, filename string) (info Info, err error) {
 	dir := path.Join(i.dir, prefix)
 	filepath := path.Join(dir, filename)
 

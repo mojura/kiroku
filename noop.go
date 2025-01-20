@@ -31,6 +31,6 @@ func (n *NOOP) GetNextList(ctx context.Context, prefix, lastFilename string, max
 	return []string{}, io.EOF
 }
 
-func (n *NOOP) GetHead(ctx context.Context, prefix, filename string) (Info, error) {
+func (n *NOOP) GetInfo(ctx context.Context, prefix, filename string) (Info, error) {
 	return Info{}, io.EOF
 }
