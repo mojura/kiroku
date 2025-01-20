@@ -2,6 +2,7 @@ package kiroku
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
@@ -150,4 +151,39 @@ func (i *IOSource) GetNextList(ctx context.Context, prefix, lastFilename string,
 	default:
 		return nil, err
 	}
+}
+
+func (i *IOSource) GetHead(ctx context.Context, prefix, filename string) (info Info, err error) {
+	dir := path.Join(i.dir, prefix)
+	filepath := path.Join(dir, filename)
+
+	var fi os.FileInfo
+	if fi, err = os.Stat(filepath); err != nil {
+		return
+	}
+
+	info.Key = filename
+	info.Size = fi.Size()
+	info.LastModified = fi.ModTime().Unix()
+	info.Hash, err = i.getFileHash(filepath)
+	return
+}
+
+func (i *IOSource) getFileHash(filePath string) (out string, err error) {
+	var file *os.File
+	if file, err = os.Open(filePath); err != nil {
+		return
+	}
+	defer file.Close()
+
+	// Create a new SHA-256 hash instance
+	hash := sha256.New()
+
+	// Copy the file content into the hash
+	if _, err = io.Copy(hash, file); err != nil {
+		return
+	}
+
+	out = string(hash.Sum(nil))
+	return
 }
