@@ -43,6 +43,9 @@ func TestNewConsumer(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -61,6 +64,9 @@ func TestNewConsumer(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -81,6 +87,9 @@ func TestNewConsumer(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -171,6 +180,9 @@ func TestNewOneShotConsumer(t *testing.T) {
 							return nil, io.EOF
 						}
 					}(),
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -189,6 +201,9 @@ func TestNewOneShotConsumer(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -231,6 +246,9 @@ func TestNewOneShotConsumer(t *testing.T) {
 							return nil, io.EOF
 						}
 					}(),
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -319,6 +337,9 @@ func TestConsumer_Meta(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -385,6 +406,9 @@ func TestConsumer_Close(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -407,6 +431,9 @@ func TestConsumer_Close(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -492,6 +519,9 @@ func TestConsumer_sync(t *testing.T) {
 							return nil, io.EOF
 						}
 					}(),
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -552,6 +582,9 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -574,6 +607,9 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 					},
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -602,6 +638,9 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -629,6 +668,9 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -653,6 +695,9 @@ func TestConsumer_getLatestSnapshot(t *testing.T) {
 					},
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -722,6 +767,9 @@ func TestConsumer_shouldDownload(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -744,6 +792,9 @@ func TestConsumer_shouldDownload(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -769,6 +820,9 @@ func TestConsumer_shouldDownload(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -792,6 +846,9 @@ func TestConsumer_shouldDownload(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -871,6 +928,9 @@ func TestConsumer_onChunk(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
 					return
@@ -892,6 +952,9 @@ func TestConsumer_onChunk(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -915,6 +978,9 @@ func TestConsumer_onChunk(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) {
@@ -1018,6 +1084,9 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
@@ -1040,6 +1109,9 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
@@ -1059,6 +1131,9 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate:     func(typ Type, r *Reader) (err error) { return },
@@ -1081,6 +1156,9 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate:     func(typ Type, r *Reader) (err error) { return },
 				cannotRename: true,
@@ -1101,6 +1179,9 @@ func TestConsumer_download(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
@@ -1180,6 +1261,9 @@ func TestConsumer_getNext(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{"test.12345.chunk.kir"}, nil
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
@@ -1198,6 +1282,9 @@ func TestConsumer_getNext(t *testing.T) {
 					},
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{"test.12345.chunk.kir"}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate:   func(typ Type, r *Reader) (err error) { return },
@@ -1219,6 +1306,9 @@ func TestConsumer_getNext(t *testing.T) {
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, errors.Error("nope")
 					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
@@ -1239,6 +1329,9 @@ func TestConsumer_getNext(t *testing.T) {
 					},
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{"test.12345.chunk.kir"}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
@@ -1328,6 +1421,9 @@ func TestConsumer_scan(t *testing.T) {
 							return nil, errors.ErrIsClosed
 						}
 					}(),
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
@@ -1373,6 +1469,9 @@ func TestConsumer_scan(t *testing.T) {
 							return nil, errors.ErrIsClosed
 						}
 					}(),
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
+					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
 			},
@@ -1399,6 +1498,9 @@ func TestConsumer_scan(t *testing.T) {
 					},
 					func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 						return []string{}, nil
+					},
+					func(ctx context.Context, prefix, filename string) (Info, error) {
+						return Info{}, io.EOF
 					},
 				),
 				onUpdate: func(typ Type, r *Reader) (err error) { return },
