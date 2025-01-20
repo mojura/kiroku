@@ -30,3 +30,7 @@ func (n *NOOP) GetNext(ctx context.Context, prefix, lastFilename string) (filena
 func (n *NOOP) GetNextList(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
 	return []string{}, io.EOF
 }
+
+func (n *NOOP) GetHead(ctx context.Context, prefix, filename string) (Info, error) {
+	return Info{}, io.EOF
+}
