@@ -5,13 +5,16 @@ import (
 	"io"
 )
 
-func newMockSource(e exportFn, i importFn, g getFn, gn getNextFn, gnl getNextListFn) *mockSource {
+var _ Source = &mockSource{}
+
+func newMockSource(e exportFn, i importFn, g getFn, gn getNextFn, gnl getNextListFn, gh getHeadFn) *mockSource {
 	var m mockSource
 	m.exportFn = e
 	m.importFn = i
 	m.getFn = g
 	m.getNextFn = gn
 	m.getNextListFn = gnl
+	m.getHeadFn = gh
 	return &m
 }
 
@@ -21,6 +24,7 @@ type mockSource struct {
 	getFn         getFn
 	getNextFn     getNextFn
 	getNextListFn getNextListFn
+	getHeadFn     getHeadFn
 }
 
 func (m *mockSource) Export(ctx context.Context, prefix, filename string, r io.Reader) (string, error) {
@@ -43,8 +47,13 @@ func (m *mockSource) GetNextList(ctx context.Context, prefix, lastFilename strin
 	return m.getNextListFn(ctx, prefix, lastFilename, maxKeys)
 }
 
+func (m *mockSource) GetHead(ctx context.Context, prefix, filename string) (Info, error) {
+	return m.getHeadFn(ctx, prefix, filename)
+}
+
 type exportFn func(ctx context.Context, prefix, filename string, r io.Reader) (string, error)
 type importFn func(ctx context.Context, prefix, filename string, w io.Writer) error
 type getFn func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error
 type getNextFn func(ctx context.Context, prefix, lastFilename string) (filename string, err error)
 type getNextListFn func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error)
+type getHeadFn func(ctx context.Context, prefix, filename string) (Info, error)
