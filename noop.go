@@ -2,8 +2,8 @@ package kiroku
 
 import (
 	"context"
-	"fmt"
 	"io"
+	"os"
 )
 
 var _ Source = &NOOP{}
@@ -16,7 +16,7 @@ func (n *NOOP) Export(ctx context.Context, prefix, filename string, r io.Reader)
 }
 
 func (n *NOOP) Import(ctx context.Context, prefix, filename string, w io.Writer) error {
-	return fmt.Errorf("file with the name <%s> was not found", filename)
+	return os.ErrNotExist
 }
 
 func (n *NOOP) Get(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error {
