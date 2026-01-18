@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hatchify/errors"
+	"github.com/gdbu/errors"
 )
 
 func Test_sleep(t *testing.T) {

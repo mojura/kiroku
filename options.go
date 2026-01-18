@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hatchify/errors"
+	"github.com/gdbu/errors"
 )
 
 const (

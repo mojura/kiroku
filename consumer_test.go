@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hatchify/errors"
+	"github.com/gdbu/errors"
 )
 
 func TestNewConsumer(t *testing.T) {
