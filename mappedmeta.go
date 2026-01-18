@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/edsrzf/mmap-go"
-	"github.com/hatchify/errors"
+	"github.com/gdbu/errors"
 )
 
 func newMappedMeta(opts Options) (mm *mappedMeta, err error) {

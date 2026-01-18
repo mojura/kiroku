@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hatchify/errors"
+	"github.com/gdbu/errors"
 )
 
 const errBreak = errors.Error("break")
