@@ -40,7 +40,7 @@ func (b *batcher) Batch(fn BatchFn) (err error) {
 
 func (b *batcher) create() (err error) {
 	ch := make(chan struct{})
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 	defer close(ch)
 	go func() {
 		errCh <- b.createTxn(func(txn *Transaction) (err error) {
