@@ -231,6 +231,13 @@ func (p *Producer) exportAndRemove(f Filename) (err error) {
 }
 
 func (p *Producer) transaction(t Type, fn func(*Writer) error) (err error) {
+	if !p.hasSource {
+		// Without a Source there is nothing to export a chunk to, so the
+		// blocks are discarded rather than written to a file that the watcher
+		// would only remove
+		return fn(newDiscardWriter())
+	}
+
 	// Get current timestamp
 	now := time.Now()
 	// Get Unix nano value from timestamp
