@@ -766,11 +766,18 @@ func TestProducer_exportAndRemove(t *testing.T) {
 			}
 			defer os.RemoveAll(tt.fields.opts.Dir)
 
-			p, err := NewProducerWithContext(tt.fields.ctx(), tt.fields.opts, tt.fields.src)
+			ctx, cancel := context.WithCancel(tt.fields.ctx())
+			p, err := NewProducerWithContext(ctx, tt.fields.opts, tt.fields.src)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer p.Close()
+
+			// The producer's watcher exports and removes the chunks it finds in
+			// its directory, so it is stopped before this test makes one and
+			// calls exportAndRemove itself
+			cancel()
+			p.w.waitToComplete()
 
 			fn := makeFilename(tt.fields.opts.FullName(), time.Now().UnixNano(), tt.fields.filetype)
 
