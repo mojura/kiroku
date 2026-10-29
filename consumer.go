@@ -137,6 +137,8 @@ type Consumer struct {
 	w *watcher
 
 	// Queue length is only used when capacity is set
+	// Note: Every scan checks capacity, so qmux guards it
+	qmux        sync.Mutex
 	queueLength int64
 
 	// List of filenames to download from, when this is empty - more can be replenished
@@ -247,6 +249,8 @@ func (c *Consumer) isWithinCapcity() (ok bool, err error) {
 		return true, nil
 	}
 
+	c.qmux.Lock()
+	defer c.qmux.Unlock()
 	if c.queueLength >= c.opts.ConsumerFileLimit {
 		if c.queueLength, err = c.getQueueLength(); err != nil {
 			return
