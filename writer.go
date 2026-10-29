@@ -1,6 +1,7 @@
 package kiroku
 
 import (
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -26,6 +27,14 @@ func newWriter(dir string, filename Filename) (wp *Writer, err error) {
 	w.w = enkodo.NewWriter(w.f)
 	wp = &w
 	return
+}
+
+// newDiscardWriter returns a Writer whose blocks are encoded and discarded,
+// for a Producer with no Source to export them to
+func newDiscardWriter() *Writer {
+	var w Writer
+	w.w = enkodo.NewWriter(io.Discard)
+	return &w
 }
 
 // Writer will write a history chunk

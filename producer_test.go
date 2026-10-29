@@ -960,3 +960,31 @@ func TestProducer_transaction(t *testing.T) {
 		})
 	}
 }
+
+func TestProducer_TransactionWithoutSourceWritesNoChunk(t *testing.T) {
+	dir := t.TempDir()
+	p, err := NewProducer(MakeOptions(dir, "test"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	// A producer without a Source has nowhere to export a chunk, so it must
+	// not need to create one: its directory is made read-only
+	if err = os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(dir, 0o700)
+
+	if err = p.Transaction(func(txn *Transaction) error {
+		return txn.Write([]byte("hello world"))
+	}); err != nil {
+		t.Fatalf("a transaction without a source answered <%v>", err)
+	}
+
+	if err = p.Snapshot(func(ss *Snapshot) error {
+		return ss.Write([]byte("hello world"))
+	}); err != nil {
+		t.Fatalf("a snapshot without a source answered <%v>", err)
+	}
+}
