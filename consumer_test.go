@@ -1526,6 +1526,9 @@ func TestConsumer_scan(t *testing.T) {
 				c.Close()
 			}
 
+			// scan marks itself done on return, as NewConsumer and
+			// NewOneShotConsumer count it before starting it
+			c.swg.Add(1)
 			c.scan(false)
 		})
 	}
