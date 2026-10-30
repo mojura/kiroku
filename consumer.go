@@ -129,6 +129,10 @@ func newConsumer(ctx context.Context, opts Options, src Source, onUpdate UpdateF
 // Consumer represents a read-only instance of historical DB entries
 // Note: The mirror is updated through it's Importer
 type Consumer struct {
+	// mux is currently only used for queueLength checks: every scan checks
+	// capacity, so it guards queueLength.
+	mux sync.Mutex
+
 	ctx   context.Context
 	close func()
 
@@ -137,8 +141,6 @@ type Consumer struct {
 	w *watcher
 
 	// Queue length is only used when capacity is set
-	// Note: Every scan checks capacity, so qmux guards it
-	qmux        sync.Mutex
 	queueLength int64
 
 	// List of filenames to download from, when this is empty - more can be replenished
@@ -249,8 +251,8 @@ func (c *Consumer) isWithinCapcity() (ok bool, err error) {
 		return true, nil
 	}
 
-	c.qmux.Lock()
-	defer c.qmux.Unlock()
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	if c.queueLength >= c.opts.ConsumerFileLimit {
 		if c.queueLength, err = c.getQueueLength(); err != nil {
 			return
