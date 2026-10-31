@@ -8,6 +8,7 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -1744,5 +1745,35 @@ func TestConsumer_isWithinCapcity(t *testing.T) {
 				t.Errorf("Consumer.isWithinCapcity() = %v, want %v", gotOk, tt.wantOk)
 			}
 		})
+	}
+}
+
+func TestConsumer_isWithinCapcity_concurrent(t *testing.T) {
+	opts := MakeOptions(t.TempDir(), "test")
+	opts.ConsumerFileLimit = 1 << 30
+	c, err := newConsumer(context.Background(), opts, nil, func(Type, *Reader) error { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = c.Close() }()
+
+	// A consumer runs ConsumerConcurrencyCount scans at once, and each checks
+	// its capacity before every download: every check must be counted
+	const scans, checks = 8, 100_000
+	var wg sync.WaitGroup
+	for range scans {
+		wg.Go(func() {
+			for range checks {
+				if _, err := c.isWithinCapcity(); err != nil {
+					t.Error(err)
+					return
+				}
+			}
+		})
+	}
+	wg.Wait()
+
+	if c.queueLength != scans*checks {
+		t.Fatalf("%d concurrent capacity checks counted <%d>", scans*checks, c.queueLength)
 	}
 }
