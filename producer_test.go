@@ -5,8 +5,11 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/gdbu/errors"
 )
 
 func TestNewProducer(t *testing.T) {
@@ -617,18 +620,6 @@ func TestProducer_exportAndRemove(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "no source",
-			fields: fields{
-				ctx: func() context.Context {
-					return context.Background()
-				},
-				opts:     MakeOptions("./testing", "test"),
-				src:      nil,
-				filetype: TypeChunk,
-			},
-			wantErr: false,
-		},
-		{
 			name: "snapshot",
 			fields: fields{
 				ctx: func() context.Context {
@@ -993,5 +984,254 @@ func TestProducer_TransactionWithoutSourceWritesNoChunk(t *testing.T) {
 		return ss.Write([]byte("hello world"))
 	}); err != nil {
 		t.Fatalf("a snapshot without a source answered <%v>", err)
+	}
+}
+
+func TestProducer_SourcelessTransactionEncodesNothing(t *testing.T) {
+	p, err := NewProducer(MakeOptions(t.TempDir(), "test"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	type testcase struct {
+		name string
+		run  func(value []byte) error
+	}
+
+	tests := []testcase{
+		{
+			name: "transaction",
+			run: func(value []byte) error {
+				return p.Transaction(func(txn *Transaction) error { return txn.Write(value) })
+			},
+		},
+		{
+			name: "snapshot",
+			run: func(value []byte) error {
+				return p.Snapshot(func(ss *Snapshot) error { return ss.Write(value) })
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value := []byte("hello world")
+			// No Writer, enkodo Writer, Encoder or wrapper is made for a block
+			// that is discarded (main allocated 6 times per run here)
+			allocs := testing.AllocsPerRun(100, func() {
+				if err := tt.run(value); err != nil {
+					t.Fatal(err)
+				}
+			})
+			if allocs != 0 {
+				t.Fatalf("a %s without a source allocated %v times per run, want 0", tt.name, allocs)
+			}
+
+			if err := tt.run(nil); err != ErrEmptyBlock {
+				t.Fatalf("an empty block answered <%v>, want <%v>", err, ErrEmptyBlock)
+			}
+		})
+	}
+}
+
+func TestProducer_SourcelessStartsNoWatcher(t *testing.T) {
+	p, err := NewProducer(MakeOptions(t.TempDir(), "test"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if p.w != nil {
+		t.Fatal("a producer without a source started a chunk watcher")
+	}
+
+	if err = p.Close(); err != nil {
+		t.Fatalf("Close of a producer without a source answered <%v>", err)
+	}
+
+	if err = p.Close(); err != errors.ErrIsClosed {
+		t.Fatalf("a second Close answered <%v>, want <%v>", err, errors.ErrIsClosed)
+	}
+
+	called := false
+	if err = p.Transaction(func(*Transaction) error { called = true; return nil }); err != errors.ErrIsClosed || called {
+		t.Fatalf("a Transaction after Close answered <%v> and ran its func: %v, want <%v> and false", err, called, errors.ErrIsClosed)
+	}
+
+	if err = p.Snapshot(func(*Snapshot) error { called = true; return nil }); err != errors.ErrIsClosed || called {
+		t.Fatalf("a Snapshot after Close answered <%v> and ran its func: %v, want <%v> and false", err, called, errors.ErrIsClosed)
+	}
+}
+
+func TestProducer_CloseReleasesMappedMeta(t *testing.T) {
+	type fields struct {
+		src                Source
+		avoidExportOnClose bool
+		cancelParent       bool
+	}
+
+	type testcase struct {
+		name    string
+		fields  fields
+		wantErr error
+	}
+
+	src := newMockSource(
+		func(ctx context.Context, prefix, filename string, r io.Reader) (string, error) { return filename, nil },
+		func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
+		func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
+		func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+		func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+			return []string{}, nil
+		},
+		func(ctx context.Context, prefix, filename string) (Info, error) {
+			return Info{}, io.EOF
+		},
+	)
+
+	tests := []testcase{
+		{
+			name: "without a source",
+		},
+		{
+			name:   "with a source",
+			fields: fields{src: src},
+		},
+		{
+			name:   "with a source, avoiding export on close",
+			fields: fields{src: src, avoidExportOnClose: true},
+		},
+		{
+			name:    "without a source, after its parent context is cancelled",
+			fields:  fields{cancelParent: true},
+			wantErr: errors.ErrIsClosed,
+		},
+		{
+			name:    "with a source, after its parent context is cancelled",
+			fields:  fields{src: src, cancelParent: true},
+			wantErr: errors.ErrIsClosed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := MakeOptions(t.TempDir(), "test")
+			opts.AvoidExportOnClose = tt.fields.avoidExportOnClose
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			p, err := NewProducerWithContext(ctx, opts, tt.fields.src)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.fields.cancelParent {
+				cancel()
+			}
+
+			if err = p.Close(); err != tt.wantErr {
+				t.Fatalf("Close answered <%v>, want <%v>", err, tt.wantErr)
+			}
+
+			if !p.m.closed || p.m.mm != nil {
+				t.Fatal("Close left the meta mapped")
+			}
+
+			if _, err = p.m.f.Stat(); err == nil {
+				t.Fatal("Close left the meta file's descriptor open")
+			}
+		})
+	}
+}
+
+func TestProducer_CloseExportsBeforeReleasingMeta(t *testing.T) {
+	var (
+		exports  int32
+		exported string
+	)
+
+	// The watcher's first export is held until Close has cancelled the
+	// producer's context, then fails, so its retry sleep returns at once and
+	// the chunk is exported by Close, whose meta must still be mapped to record
+	// it. Every step waits on an event; none on elapsed time.
+	attempted := make(chan struct{})
+	release := make(chan struct{})
+	src := newMockSource(
+		func(ctx context.Context, prefix, filename string, r io.Reader) (string, error) {
+			if atomic.AddInt32(&exports, 1) == 1 {
+				close(attempted)
+				<-release
+				return "", io.ErrUnexpectedEOF
+			}
+
+			exported = filename
+			return filename, nil
+		},
+		func(ctx context.Context, prefix, filename string, w io.Writer) error { return nil },
+		func(ctx context.Context, prefix, filename string, fn func(io.Reader) error) error { return nil },
+		func(ctx context.Context, prefix, lastFilename string) (filename string, err error) { return "", nil },
+		func(ctx context.Context, prefix, lastFilename string, maxKeys int64) (filenames []string, err error) {
+			return []string{}, nil
+		},
+		func(ctx context.Context, prefix, filename string) (Info, error) {
+			return Info{}, io.EOF
+		},
+	)
+
+	opts := MakeOptions(t.TempDir(), "test")
+	opts.OnError = func(error) {}
+	p, err := NewProducer(opts, src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = p.Transaction(func(txn *Transaction) error {
+		return txn.Write([]byte("hello world"))
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	<-attempted
+	closed := make(chan error, 1)
+	go func() { closed <- p.Close() }()
+	<-p.ctx.Done()
+	close(release)
+	if err = <-closed; err != nil {
+		t.Fatalf("Close answered <%v>", err)
+	}
+
+	want, err := makeMetaFromFilename(exported)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := newMappedMeta(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+
+	if got := m.Get(); got != want {
+		t.Fatalf("the meta file holds <%+v> after Close exported a chunk, want <%+v>", got, want)
+	}
+}
+
+// A Meta that races Close can find the meta released while the producer's
+// context is still open: Close cancels, then releases. That state is made
+// here directly, and Meta must answer ErrIsClosed rather than an empty Meta
+// with no error.
+func TestProducer_MetaAfterItsMetaIsReleased(t *testing.T) {
+	p, err := NewProducer(MakeOptions(t.TempDir(), "test"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.cancelFn()
+
+	if err = p.m.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if meta, err := p.Meta(); err != errors.ErrIsClosed || meta != (Meta{}) {
+		t.Fatalf("Meta after its meta was released answered <%+v> <%v>, want an empty Meta and <%v>", meta, err, errors.ErrIsClosed)
 	}
 }

@@ -1,5 +1,9 @@
 package kiroku
 
+// discardSnapshot is every snapshot of a Producer without a Source: its nil
+// Writer discards each block, and nothing ever changes it
+var discardSnapshot Snapshot
+
 func newSnapshot(w *Writer) *Snapshot {
 	var s Snapshot
 	s.w = w
