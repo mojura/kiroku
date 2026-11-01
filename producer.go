@@ -15,15 +15,16 @@ import (
 
 const errBreak = errors.Error("break")
 
-// New will initialize a new Producer instance
-// Note: Processor and Options are optional
+// NewProducer will initialize a new Producer instance
+// Note: Source is optional (see NewProducerWithContext)
 func NewProducer(o Options, src Source) (kp *Producer, err error) {
-	// Call NewWithContext with a background context
+	// Call NewProducerWithContext with a background context
 	return NewProducerWithContext(context.Background(), o, src)
 }
 
-// NewWithContext will initialize a new Producer instance with a provided context.Context
-// Note: Processor and Options are optional
+// NewProducerWithContext will initialize a new Producer instance with a provided context.Context
+// Note: Source is optional. Without a Source, the Producer discards every
+// block and leaves any file already in Options.Dir in place
 func NewProducerWithContext(ctx context.Context, o Options, src Source) (kp *Producer, err error) {
 	if err = o.Validate(); err != nil {
 		return
@@ -46,7 +47,10 @@ func NewProducerWithContext(ctx context.Context, o Options, src Source) (kp *Pro
 		return
 	}
 
-	p.w = newWatcher(p.ctx, o, p.exportAndRemove, TypeChunk, TypeSnapshot)
+	if p.hasSource {
+		// Without a Source no chunk is written, so there is none to watch for
+		p.w = newWatcher(p.ctx, o, p.exportAndRemove, TypeChunk, TypeSnapshot)
+	}
 	p.b = newBatcher(p.opts.BatchDuration, p.Transaction)
 	kp = &p
 	return
@@ -81,6 +85,11 @@ func (p *Producer) Transaction(fn TransactionFn) (err error) {
 		return errors.ErrIsClosed
 	}
 
+	if !p.hasSource {
+		// Without a Source there is nothing to export a block to
+		return fn(&discardTransaction)
+	}
+
 	txnFn := func(w *Writer) (err error) {
 		txn := newTransaction(w)
 
@@ -99,6 +108,11 @@ func (p *Producer) Snapshot(fn func(*Snapshot) error) (err error) {
 	// Check to see if Producer is closed
 	if isClosed(p.ctx) {
 		return errors.ErrIsClosed
+	}
+
+	if !p.hasSource {
+		// Without a Source there is nothing to export a block to
+		return fn(&discardSnapshot)
 	}
 
 	txnFn := func(w *Writer) (err error) {
@@ -131,7 +145,12 @@ func (p *Producer) Meta() (meta Meta, err error) {
 		return
 	}
 
-	meta = p.m.Get()
+	var open bool
+	if meta, open = p.m.getOpen(); !open {
+		// A Meta racing Close found the meta already released
+		return Meta{}, errors.ErrIsClosed
+	}
+
 	return
 }
 
@@ -142,23 +161,35 @@ func (p *Producer) Close() (err error) {
 
 	// Check to see if Producer is closed
 	if isClosed(p.ctx) {
-		// Wait for jobs to finish
-		p.w.waitToComplete()
-		return errors.ErrIsClosed
+		if p.w != nil {
+			// Wait for jobs to finish
+			p.w.waitToComplete()
+		}
+
+		// A cancelled parent context closes the Producer before any call to
+		// Close, so the meta is released by the first one
+		if err = p.m.Close(); err == nil {
+			err = errors.ErrIsClosed
+		}
+		return
 	}
 
 	// Cancel the context
 	p.cancelFn()
 
-	// Wait for jobs to finish
-	p.w.waitToComplete()
-
 	var errs errors.ErrorList
-	if !p.opts.AvoidExportOnClose {
-		// Options do not request avoiding merge on close, process remaining merged chunks
-		errs.Push(p.w.processAll())
+	if p.w != nil {
+		// Wait for jobs to finish
+		p.w.waitToComplete()
+
+		if !p.opts.AvoidExportOnClose {
+			// Options do not request avoiding merge on close, process remaining merged chunks
+			errs.Push(p.w.processAll())
+		}
 	}
 
+	// Release the meta file's mapping and descriptor
+	errs.Push(p.m.Close())
 	return errs.Err()
 }
 
@@ -179,11 +210,6 @@ func (p *Producer) rename(f Filename, t Type) (err error) {
 }
 
 func (p *Producer) export(filename Filename) (err error) {
-	if !p.hasSource {
-		// Exporter not set, return
-		return
-	}
-
 	var f *os.File
 	filepath := path.Join(p.opts.Dir, filename.String())
 	if f, err = os.Open(filepath); err != nil {
@@ -231,13 +257,6 @@ func (p *Producer) exportAndRemove(f Filename) (err error) {
 }
 
 func (p *Producer) transaction(t Type, fn func(*Writer) error) (err error) {
-	if !p.hasSource {
-		// Without a Source there is nothing to export a chunk to, so the
-		// blocks are discarded rather than written to a file that the watcher
-		// would only remove
-		return fn(newDiscardWriter())
-	}
-
 	// Get current timestamp
 	now := time.Now()
 	// Get Unix nano value from timestamp

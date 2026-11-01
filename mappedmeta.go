@@ -37,14 +37,19 @@ type mappedMeta struct {
 }
 
 func (m *mappedMeta) Get() (meta Meta) {
+	meta, _ = m.getOpen()
+	return
+}
+
+// getOpen is Get, and whether the meta was still mapped to read
+func (m *mappedMeta) getOpen() (meta Meta, open bool) {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
 	if m.closed {
 		return
 	}
 
-	meta = *m.m
-	return
+	return *m.m, true
 }
 
 func (m *mappedMeta) Set(meta Meta) {

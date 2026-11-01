@@ -1,5 +1,9 @@
 package kiroku
 
+// discardTransaction is every transaction of a Producer without a Source: its
+// nil Writer discards each block, and nothing ever changes it
+var discardTransaction Transaction
+
 func newTransaction(w *Writer) *Transaction {
 	var t Transaction
 	t.w = w
